@@ -28,6 +28,9 @@ builder.Services.AddOptions<JwtOptions>()
 builder.Services.AddOptions<PasswordHashOptions>()
     .Bind(builder.Configuration.GetSection(PasswordHashOptions.SectionName));
 
+builder.Services.AddOptions<WalletOptions>()
+    .Bind(builder.Configuration.GetSection(WalletOptions.SectionName));
+
 builder.Services.AddOptions<KafkaOptions>()
     .Bind(builder.Configuration.GetSection(KafkaOptions.SectionName));
 
@@ -56,7 +59,8 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasher, Argon2PasswordHasher>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
-// TODO (Owner A): IWalletService, ITransferService, outbox publisher (BackgroundService)
+builder.Services.AddScoped<IWalletService, WalletService>();
+// TODO (Owner A): ITransferService, outbox publisher (BackgroundService)
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();

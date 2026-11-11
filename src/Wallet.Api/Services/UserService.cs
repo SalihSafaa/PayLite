@@ -39,7 +39,9 @@ public class UserService : IUserService
         {
             Username = username,
             PasswordHash = _passwordHasher.Hash(request.Password),
-            Role = Roles.User
+            Role = request.AccountType,
+            // Created in the same SaveChanges (one transaction): a user never exists without a wallet.
+            Wallet = new Wallet { Balance = 0m, Currency = WalletDefaults.Currency }
         };
 
         _context.Users.Add(user);

@@ -72,6 +72,49 @@ namespace PayLite.WalletApi.Migrations
                     b.ToTable("RefreshTokens", "wallet");
                 });
 
+            modelBuilder.Entity("PayLite.WalletApi.TopUp", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("LastUpdate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("WalletId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("TopUps", "wallet", t =>
+                        {
+                            t.HasCheckConstraint("CK_TopUps_Amount_Positive", "[Amount] > 0");
+                        });
+                });
+
             modelBuilder.Entity("PayLite.WalletApi.User", b =>
                 {
                     b.Property<int>("Id")
@@ -117,6 +160,52 @@ namespace PayLite.WalletApi.Migrations
                     b.ToTable("Users", "wallet");
                 });
 
+            modelBuilder.Entity("PayLite.WalletApi.Wallet", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Balance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nchar(3)")
+                        .IsFixedLength();
+
+                    b.Property<DateTime>("LastUpdate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Wallets", "wallet", t =>
+                        {
+                            t.HasCheckConstraint("CK_Wallets_Balance_NonNegative", "[Balance] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("PayLite.WalletApi.RefreshToken", b =>
                 {
                     b.HasOne("PayLite.WalletApi.User", "User")
@@ -126,6 +215,33 @@ namespace PayLite.WalletApi.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PayLite.WalletApi.TopUp", b =>
+                {
+                    b.HasOne("PayLite.WalletApi.Wallet", "Wallet")
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Wallet");
+                });
+
+            modelBuilder.Entity("PayLite.WalletApi.Wallet", b =>
+                {
+                    b.HasOne("PayLite.WalletApi.User", "User")
+                        .WithOne("Wallet")
+                        .HasForeignKey("PayLite.WalletApi.Wallet", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("PayLite.WalletApi.User", b =>
+                {
+                    b.Navigation("Wallet");
                 });
 #pragma warning restore 612, 618
         }

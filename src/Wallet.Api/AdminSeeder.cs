@@ -45,7 +45,8 @@ public static class AdminSeeder
         {
             Username = seedUsername,
             PasswordHash = passwordHasher.Hash(seedPassword),
-            Role = Roles.Admin
+            Role = Roles.Admin,
+            Wallet = new Wallet { Balance = 0m, Currency = WalletDefaults.Currency }
         });
         logger.LogInformation("Seeded initial Admin user {Username} at startup.", seedUsername);
 

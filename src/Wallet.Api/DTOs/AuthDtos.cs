@@ -11,6 +11,10 @@ public class RegisterRequestDto
     [Required(ErrorMessage = "Password is required.")]
     [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters long and no more than 100 characters.")]
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>"User" or "Merchant". Admin can never be chosen at registration.</summary>
+    [AllowedValues(Roles.User, Roles.Merchant, ErrorMessage = "AccountType must be 'User' or 'Merchant'.")]
+    public string AccountType { get; set; } = Roles.User;
 }
 
 public class LoginRequestDto

@@ -15,6 +15,7 @@ export function RegisterPage() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [accountType, setAccountType] = useState<'User' | 'Merchant'>('User')
   const [submitting, setSubmitting] = useState(false)
   const [problem, setProblem] = useState<ProblemDetails | null>(null)
 
@@ -29,7 +30,7 @@ export function RegisterPage() {
     setSubmitting(true)
     setProblem(null)
     try {
-      const { error } = await walletApi.POST('/api/auth/register', { body: { username, password } })
+      const { error } = await walletApi.POST('/api/auth/register', { body: { username, password, accountType } })
       if (error) {
         setProblem(toProblemDetails(error))
         return
@@ -53,6 +54,13 @@ export function RegisterPage() {
         <label>
           Password
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" maxLength={100} />
+        </label>
+        <label>
+          Account type
+          <select value={accountType} onChange={(e) => setAccountType(e.target.value as 'User' | 'Merchant')}>
+            <option value="User">Personal: send and receive money</option>
+            <option value="Merchant">Merchant: receive payments from customers</option>
+          </select>
         </label>
         <ProblemDetailsAlert problem={problem} />
         <button type="submit" disabled={submitting}>{submitting ? 'Creating…' : 'Register'}</button>
