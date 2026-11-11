@@ -10,12 +10,12 @@ WORKDIR /src
 COPY Directory.Build.props dotnet-tools.json ./
 COPY src/Shared.Contracts/Shared.Contracts.csproj src/Shared.Contracts/
 COPY src/Activity.Service/Activity.Service.csproj src/Activity.Service/
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet restore src/Activity.Service/Activity.Service.csproj
 
 COPY src/Shared.Contracts/ src/Shared.Contracts/
 COPY src/Activity.Service/ src/Activity.Service/
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish src/Activity.Service/Activity.Service.csproj -c Release -o /app/publish --no-restore
 
 # Stage 2: run on the small ASP.NET runtime image
@@ -29,9 +29,9 @@ ENTRYPOINT ["dotnet", "Activity.Service.dll"]
 
 # Stage 3: build the EF Core migration bundle (one self-contained executable)
 FROM build AS bundle
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet tool restore
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet tool run dotnet-ef migrations bundle --project src/Activity.Service/Activity.Service.csproj -o /app/efbundle --force
 
 # Stage 4: tiny image that only runs the bundle (the "activity-migrator" compose service)

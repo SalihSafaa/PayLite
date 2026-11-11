@@ -10,12 +10,12 @@ WORKDIR /src
 COPY Directory.Build.props dotnet-tools.json ./
 COPY src/Shared.Contracts/Shared.Contracts.csproj src/Shared.Contracts/
 COPY src/Wallet.Api/Wallet.Api.csproj src/Wallet.Api/
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet restore src/Wallet.Api/Wallet.Api.csproj
 
 COPY src/Shared.Contracts/ src/Shared.Contracts/
 COPY src/Wallet.Api/ src/Wallet.Api/
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet publish src/Wallet.Api/Wallet.Api.csproj -c Release -o /app/publish --no-restore
 
 # Stage 2: run on the small ASP.NET runtime image
@@ -29,9 +29,9 @@ ENTRYPOINT ["dotnet", "Wallet.Api.dll"]
 
 # Stage 3: build the EF Core migration bundle (one self-contained executable)
 FROM build AS bundle
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet tool restore
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     dotnet tool run dotnet-ef migrations bundle --project src/Wallet.Api/Wallet.Api.csproj -o /app/efbundle --force
 
 # Stage 4: tiny image that only runs the bundle (the "wallet-migrator" compose service)
