@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared.Contracts holds ONLY what both services must agree on: the event envelope,
+    event payloads, topic names and header names. No logic, no EF, no ASP.NET.
+    Changing anything here changes the contract: open a PR and get both owners' approval.
+  -->
+  <PropertyGroup>
+    <RootNamespace>PayLite.Contracts</RootNamespace>
+  </PropertyGroup>
+
+</Project>

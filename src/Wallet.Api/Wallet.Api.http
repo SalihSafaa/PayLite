@@ -1,0 +1,67 @@
+@HostAddress = http://localhost:8081
+@Token = Bearer {{login.response.body.$.accessToken}}
+
+# Credentials come from your local .env file (never hard-code them here).
+# Requires the VS Code "REST Client" extension, which reads .env via $dotenv.
+
+### === HEALTH ===
+
+### Health (expect 200 Healthy; sqlserver Unhealthy -> 503; kafka down -> "Degraded")
+GET {{HostAddress}}/health
+
+
+### === AUTH ===
+
+### Login as the seeded admin (run first; other requests reuse its token)
+# @name login
+POST {{HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{$dotenv ADMIN_SEED_USERNAME}}",
+  "password": "{{$dotenv ADMIN_SEED_PASSWORD}}"
+}
+
+### Register a user (expect 201; run twice -> 409)
+POST {{HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "Password123!"
+}
+
+### Same name, different case (expect 409: usernames are case-insensitive)
+POST {{HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "ALICE",
+  "password": "Password123!"
+}
+
+### Make a user a Merchant (admin only)
+PUT {{HostAddress}}/api/auth/user
+Authorization: {{Token}}
+Content-Type: application/json
+
+{
+  "id": 2,
+  "role": "Merchant"
+}
+
+### Refresh (paste a refresh token from a login response)
+POST {{HostAddress}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "paste-a-refresh-token-here"
+}
+
+
+### === WALLETS & TRANSFERS (Owner A, TODO) ===
+# GET  /api/wallets/me
+# POST /api/wallets/me/top-ups
+# POST /api/transfers            (Idempotency-Key header)
+# GET  /api/transfers?page=&pageSize=
+# GET  /api/merchants/me/payments?page=

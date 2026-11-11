@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Activity.Service/Activity.Service.csproj" />
+    <Project Path="src/Shared.Contracts/Shared.Contracts.csproj" />
+    <Project Path="src/Wallet.Api/Wallet.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Activity.Service.Tests/Activity.Service.Tests.csproj" />
+    <Project Path="tests/Wallet.Api.Tests/Wallet.Api.Tests.csproj" />
+  </Folder>
+</Solution>

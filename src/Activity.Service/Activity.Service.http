@@ -1,0 +1,25 @@
+@HostAddress = http://localhost:8082
+@WalletAddress = http://localhost:8081
+@Token = Bearer {{login.response.body.$.accessToken}}
+
+# Tokens are issued by the Wallet API and validated here.
+
+### Health (expect 200 Healthy)
+GET {{HostAddress}}/health
+
+### Get a token from the Wallet API
+# @name login
+POST {{WalletAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{$dotenv ADMIN_SEED_USERNAME}}",
+  "password": "{{$dotenv ADMIN_SEED_PASSWORD}}"
+}
+
+
+### === NOTIFICATIONS & SUMMARY (Owner B, TODO) ===
+# GET  /api/notifications?unreadOnly=
+# POST /api/notifications/{id}/read
+# GET  /api/merchants/me/daily-summary?date=
+# Hub  /hubs/notifications

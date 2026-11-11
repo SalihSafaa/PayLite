@@ -1,0 +1,38 @@
+# Build artifacts
+bin/
+obj/
+publish/
+.tools/
+TestResults/
+coverage/
+*.log
+logs/
+
+# Visual Studio / IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.dbmdl
+*.jfm
+.idea/
+*.swp
+*.sln.iml
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.Local.json
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Frontend
+node_modules/
+dist/
+*.tsbuildinfo

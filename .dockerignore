@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/logs/
+**/node_modules/
+**/dist/
+tests/
+docs/
+.vs/
+.vscode/
+.idea/
+.git/
+.github/
+.env

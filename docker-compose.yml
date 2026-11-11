@@ -1,0 +1,178 @@
+# Start order (each arrow is a depends_on condition):
+#
+#   sqlserver (healthy) ─┬─> wallet-migrator ──┐
+#                        └─> activity-migrator ┴─> dbsetup ─┬─> wallet-api ──────┐
+#   kafka (healthy) ──────> kafka-init ─────────────────────┴─> activity-service ┴─> frontend
+#
+# One-shot services (migrators, dbsetup, kafka-init) run once and exit 0; the APIs only
+# start after they "completed successfully". No manual steps from a fresh clone + .env.
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required}"
+    ports:
+      - "1433:1433" # for SSMS / VS Code MSSQL. Remove in a real deployment.
+    volumes:
+      - sql_data:/var/opt/mssql
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+
+  kafka:
+    image: apache/kafka:4.1.0
+    environment:
+      # Single node in KRaft mode (no ZooKeeper): this node is both broker and controller.
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # PLAINTEXT is used inside the compose network (kafka:9092),
+      # PLAINTEXT_HOST from your machine (localhost:29092), e.g. for `dotnet run`.
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Topics are created explicitly by kafka-init, so a typo in a topic name fails loudly
+      # instead of silently creating a new, empty topic.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    ports:
+      - "29092:29092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1 || exit 1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+
+  kafka-init:
+    image: apache/kafka:4.1.0
+    # Keep the topic names in sync with src/Shared.Contracts/Kafka/Topics.cs (ADR-0004).
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        set -e
+        for topic in paylite.transfers paylite.transfers.dlt; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+            --topic "$$topic" --partitions 3 --replication-factor 1
+        done
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+
+  wallet-migrator:
+    build:
+      context: .
+      dockerfile: src/Wallet.Api/Dockerfile
+      target: migrator
+    command:
+      - "--connection"
+      - "Server=sqlserver;Database=WalletDb;User Id=sa;Password=${DB_PASSWORD:?DB_PASSWORD is required};TrustServerCertificate=True"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: "no"
+
+  activity-migrator:
+    build:
+      context: .
+      dockerfile: src/Activity.Service/Dockerfile
+      target: migrator
+    command:
+      - "--connection"
+      - "Server=sqlserver;Database=ActivityDb;User Id=sa;Password=${DB_PASSWORD:?DB_PASSWORD is required};TrustServerCertificate=True"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: "no"
+
+  dbsetup:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      DB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required}"
+      WALLET_DB_PASSWORD: "${WALLET_DB_PASSWORD:?WALLET_DB_PASSWORD is required}"
+      ACTIVITY_DB_PASSWORD: "${ACTIVITY_DB_PASSWORD:?ACTIVITY_DB_PASSWORD is required}"
+    volumes:
+      - ./db/init-app-logins.sql:/init-app-logins.sql:ro
+    entrypoint:
+      - /bin/bash
+      - -c
+      - /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$DB_PASSWORD" -C -b -v WALLET_DB_PASSWORD="$$WALLET_DB_PASSWORD" ACTIVITY_DB_PASSWORD="$$ACTIVITY_DB_PASSWORD" -i /init-app-logins.sql
+    depends_on:
+      wallet-migrator:
+        condition: service_completed_successfully
+      activity-migrator:
+        condition: service_completed_successfully
+    restart: "no"
+
+  wallet-api:
+    build:
+      context: .
+      dockerfile: src/Wallet.Api/Dockerfile
+      target: final
+    ports:
+      - "8081:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
+      ConnectionStrings__WalletDb: "Server=sqlserver;Database=WalletDb;User Id=wallet_app;Password=${WALLET_DB_PASSWORD:?WALLET_DB_PASSWORD is required};TrustServerCertificate=True"
+      Jwt__Key: "${JWT_KEY:?JWT_KEY is required}"
+      Jwt__Issuer: "${JWT_ISSUER:-PayLite}"
+      Jwt__Audience: "${JWT_AUDIENCE:-PayLite}"
+      Kafka__BootstrapServers: "kafka:9092"
+      Seed__AdminUsername: "${ADMIN_SEED_USERNAME:?ADMIN_SEED_USERNAME is required}"
+      Seed__AdminPassword: "${ADMIN_SEED_PASSWORD:?ADMIN_SEED_PASSWORD is required}"
+    depends_on:
+      dbsetup:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  activity-service:
+    build:
+      context: .
+      dockerfile: src/Activity.Service/Dockerfile
+      target: final
+    ports:
+      - "8082:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
+      ConnectionStrings__ActivityDb: "Server=sqlserver;Database=ActivityDb;User Id=activity_app;Password=${ACTIVITY_DB_PASSWORD:?ACTIVITY_DB_PASSWORD is required};TrustServerCertificate=True"
+      Jwt__Key: "${JWT_KEY:?JWT_KEY is required}"
+      Jwt__Issuer: "${JWT_ISSUER:-PayLite}"
+      Jwt__Audience: "${JWT_AUDIENCE:-PayLite}"
+      Kafka__BootstrapServers: "kafka:9092"
+    depends_on:
+      dbsetup:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - wallet-api
+      - activity-service
+    restart: unless-stopped
+
+volumes:
+  sql_data:
+  kafka_data:
