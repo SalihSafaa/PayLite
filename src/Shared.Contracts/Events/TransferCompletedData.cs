@@ -4,8 +4,8 @@ namespace PayLite.Contracts;
 /// Payload of <see cref="EventTypes.TransferCompleted"/>, version 1.
 /// </summary>
 /// <remarks>
-/// Money follows docs/adr/0001-money-representation.md: <c>decimal</c> in C#, <c>decimal(18,2)</c>
-/// in SQL Server, a JSON number on the wire, and IQD amounts are always whole dinars.
+/// TODO (Day 2, ADR-0001): confirm how money is represented. <c>decimal</c> is used here so no
+/// precision is lost in C#; the JSON shape and the SQL type must match whatever the ADR decides.
 /// </remarks>
 public sealed record TransferCompletedData(
     long TransferId,
