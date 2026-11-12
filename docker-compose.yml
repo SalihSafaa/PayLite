@@ -68,6 +68,12 @@ services:
           /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
             --topic "$$topic" --partitions 3 --replication-factor 1
         done
+        # ADR-0004: keep transfer events forever (so ActivityDb can be rebuilt by replay),
+        # and dead letters for 14 days. --alter also fixes topics that already exist in the volume.
+        /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka:9092 --alter \
+          --entity-type topics --entity-name paylite.transfers --add-config retention.ms=-1
+        /opt/kafka/bin/kafka-configs.sh --bootstrap-server kafka:9092 --alter \
+          --entity-type topics --entity-name paylite.transfers.dlt --add-config retention.ms=1209600000
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
     depends_on:
       kafka:
