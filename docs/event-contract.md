@@ -42,4 +42,9 @@ Serialize with `EventJson.Options` on both sides (camelCase).
 
 ## Topics and keys
 
-_TODO (ADR-0004)._ Proposal: `paylite.transfers` and `paylite.transfers.dlt`, 3 partitions each.
+See [ADR-0004](adr/0004-kafka-topic-and-delivery.md) (proposed).
+
+| Topic | Key | Partitions |
+|---|---|---:|
+| `paylite.transfers` | `toWalletId` (string) | 3, retention forever |
+| `paylite.transfers.dlt` | Original key | 3, retention 14 days |
