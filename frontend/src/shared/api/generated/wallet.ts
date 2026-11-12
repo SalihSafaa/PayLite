@@ -215,6 +215,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/wallets/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WalletDto"];
+                        "application/json": components["schemas"]["WalletDto"];
+                        "text/json": components["schemas"]["WalletDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/wallets/me/top-ups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["TopUpRequestDto"];
+                    "text/json": components["schemas"]["TopUpRequestDto"];
+                    "application/*+json": components["schemas"]["TopUpRequestDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WalletDto"];
+                        "application/json": components["schemas"]["WalletDto"];
+                        "text/json": components["schemas"]["WalletDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -233,6 +313,11 @@ export interface components {
         RegisterRequestDto: {
             username: string;
             password: string;
+            accountType: string;
+        };
+        TopUpRequestDto: {
+            /** Format: double */
+            amount: number;
         };
         UserResponseDto: {
             /** Format: int32 */
@@ -250,6 +335,14 @@ export interface components {
             /** Format: int32 */
             id: number;
             role: string;
+        };
+        WalletDto: {
+            /** Format: int32 */
+            id: number;
+            /** Format: double */
+            balance: number;
+            currency: string;
+            isMerchant: boolean;
         };
     };
     responses: never;

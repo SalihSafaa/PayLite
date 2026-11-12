@@ -18,7 +18,9 @@ public class WalletDbContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
-    // TODO (Owner A): Wallets, Transfers, IdempotencyKeys, Outbox
+    public DbSet<Wallet> Wallets { get; set; }
+    public DbSet<TopUp> TopUps { get; set; }
+    // TODO (Owner A): Transfers, IdempotencyKeys, Outbox
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,6 +49,31 @@ public class WalletDbContext : DbContext
             entity.HasIndex(token => token.TokenHash).IsUnique();
             entity.HasOne(token => token.User).WithMany()
                 .HasForeignKey(token => token.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Wallet>(entity =>
+        {
+            // The last line of defence: even a buggy procedure cannot make a balance negative.
+            entity.ToTable(table => table.HasCheckConstraint("CK_Wallets_Balance_NonNegative", "[Balance] >= 0"));
+            entity.Property(wallet => wallet.Balance).HasPrecision(18, 2);
+            entity.Property(wallet => wallet.Currency).HasMaxLength(3).IsFixedLength();
+            entity.Property(wallet => wallet.CreatedBy).HasMaxLength(256);
+            entity.Property(wallet => wallet.LastUpdatedBy).HasMaxLength(256);
+            entity.HasIndex(wallet => wallet.UserId).IsUnique(); // one wallet per user
+            entity.HasOne(wallet => wallet.User).WithOne(user => user.Wallet)
+            .HasForeignKey<Wallet>(wallet => wallet.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TopUp>(entity =>
+        {
+            entity.ToTable(table => table.HasCheckConstraint("CK_TopUps_Amount_Positive", "[Amount] > 0"));
+            entity.Property(topUp => topUp.Amount).HasPrecision(18, 2);
+            entity.Property(topUp => topUp.BalanceAfter).HasPrecision(18, 2);
+            entity.Property(topUp => topUp.CreatedBy).HasMaxLength(256);
+            entity.Property(topUp => topUp.LastUpdatedBy).HasMaxLength(256);
+            entity.HasIndex(topUp => topUp.WalletId);
+            entity.HasOne(topUp => topUp.Wallet).WithMany()
+            .HasForeignKey(topUp => topUp.WalletId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 
