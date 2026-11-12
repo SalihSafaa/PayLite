@@ -60,7 +60,8 @@ builder.Services.AddScoped<IPasswordHasher, Argon2PasswordHasher>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
-// TODO (Owner A): ITransferService, outbox publisher (BackgroundService)
+builder.Services.AddScoped<ITransferService, TransferService>();
+// TODO (Owner A): outbox publisher (BackgroundService)
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();

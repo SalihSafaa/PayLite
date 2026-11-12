@@ -214,6 +214,15 @@ cd frontend && npm run lint && npm run build
 | 6 | Activity Service down during transfers, then restarted | Catches up; nothing lost or doubled | B | _TODO_ |
 | 7 | Poison message on the topic | Goes to the dead-letter topic; consumer keeps going | B | _TODO_ |
 
+## Concurrency
+
+**Lock ordering (scenario 3).** Test: 20 A→B and 20 B→A transfers fired at the same moment.
+
+- With lowest-id-first locking: 40 × 200, both balances unchanged, 40 transfer rows.
+- With “lock the sender first”: 22 × 200, 18 × 500. Each 500 was SQL Server error 1205 (deadlock victim). A→B held A and waited for B while B→A held B and waited for A. SQL Server broke each cycle by killing one transaction. No money was lost, but valid transfers failed at random.
+
+**Scenario 2.** A wallet with 10,000 and 20 parallel transfers of 1,000: exactly 10 × 200 and 10 × 409, the sender ends at 0 and is never negative, the recipient ends at 10,000, and there are 10 transfer rows. `UPDLOCK` makes the second request wait before it reads the balance, so nobody reads a stale value.
+
 ## Where the skeleton came from
 
 The auth code (users, JWT, Argon2, refresh tokens), the `Result<T>` pattern, the exception handler,
