@@ -4,8 +4,8 @@ namespace PayLite.Contracts;
 /// Kafka topic names.
 /// </summary>
 /// <remarks>
-/// Decided in docs/adr/0004-kafka-topic-and-delivery.md. The message key is <c>toWalletId</c>
-/// (as a string), so all events for one recipient stay in order on one partition.
+/// TODO (Day 2, ADR-0004): these names are a proposal. Confirm them, and the partition key
+/// (hint from the brief: what key keeps all events for one wallet in order?), in the ADR.
 /// The topics are created by the <c>kafka-init</c> service in docker-compose.yml, so keep them in sync.
 /// </remarks>
 public static class Topics
