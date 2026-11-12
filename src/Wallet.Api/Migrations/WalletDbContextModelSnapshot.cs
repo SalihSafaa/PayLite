@@ -115,6 +115,52 @@ namespace PayLite.WalletApi.Migrations
                         });
                 });
 
+            modelBuilder.Entity("PayLite.WalletApi.Transfer", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nchar(3)")
+                        .IsFixedLength();
+
+                    b.Property<int>("FromWalletId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToWalletId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromWalletId", "CreatedAt");
+
+                    b.HasIndex("ToWalletId", "CreatedAt");
+
+                    b.ToTable("Transfers", "wallet", t =>
+                        {
+                            t.HasCheckConstraint("CK_Transfers_Amount_Positive", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_Transfers_DifferentWallets", "[FromWalletId] <> [ToWalletId]");
+                        });
+                });
+
             modelBuilder.Entity("PayLite.WalletApi.User", b =>
                 {
                     b.Property<int>("Id")
@@ -226,6 +272,25 @@ namespace PayLite.WalletApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Wallet");
+                });
+
+            modelBuilder.Entity("PayLite.WalletApi.Transfer", b =>
+                {
+                    b.HasOne("PayLite.WalletApi.Wallet", "FromWallet")
+                        .WithMany()
+                        .HasForeignKey("FromWalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PayLite.WalletApi.Wallet", "ToWallet")
+                        .WithMany()
+                        .HasForeignKey("ToWalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FromWallet");
+
+                    b.Navigation("ToWallet");
                 });
 
             modelBuilder.Entity("PayLite.WalletApi.Wallet", b =>

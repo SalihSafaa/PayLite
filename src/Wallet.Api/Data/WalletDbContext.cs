@@ -20,7 +20,8 @@ public class WalletDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Wallet> Wallets { get; set; }
     public DbSet<TopUp> TopUps { get; set; }
-    // TODO (Owner A): Transfers, IdempotencyKeys, Outbox
+    public DbSet<Transfer> Transfers { get; set; }
+    // TODO (Owner A): IdempotencyKeys, Outbox
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,6 +63,25 @@ public class WalletDbContext : DbContext
             entity.HasIndex(wallet => wallet.UserId).IsUnique(); // one wallet per user
             entity.HasOne(wallet => wallet.User).WithOne(user => user.Wallet)
             .HasForeignKey<Wallet>(wallet => wallet.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Transfer>(entity =>
+        {
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_Transfers_Amount_Positive", "[Amount] > 0");
+                table.HasCheckConstraint("CK_Transfers_DifferentWallets", "[FromWalletId] <> [ToWalletId]");
+            });
+            entity.Property(transfer => transfer.Amount).HasPrecision(18, 2);
+            entity.Property(transfer => transfer.Currency).HasMaxLength(3).IsFixedLength();
+            entity.Property(transfer => transfer.CreatedBy).HasMaxLength(256);
+            // History queries are "my transfers, newest first", sent or received.
+            entity.HasIndex(transfer => new { transfer.FromWalletId, transfer.CreatedAt });
+            entity.HasIndex(transfer => new { transfer.ToWalletId, transfer.CreatedAt });
+            entity.HasOne(transfer => transfer.FromWallet).WithMany()
+                .HasForeignKey(transfer => transfer.FromWalletId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(transfer => transfer.ToWallet).WithMany()
+                .HasForeignKey(transfer => transfer.ToWalletId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<TopUp>(entity =>
