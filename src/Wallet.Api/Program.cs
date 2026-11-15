@@ -11,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
-    .WriteTo.Console()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{CorrelationId}] {Message:lj}{NewLine}{Exception}")
     .WriteTo.File("logs/wallet-log.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
@@ -30,6 +30,9 @@ builder.Services.AddOptions<PasswordHashOptions>()
 
 builder.Services.AddOptions<WalletOptions>()
     .Bind(builder.Configuration.GetSection(WalletOptions.SectionName));
+
+builder.Services.AddOptions<OutboxOptions>()
+    .Bind(builder.Configuration.GetSection(OutboxOptions.SectionName));
 
 builder.Services.AddOptions<KafkaOptions>()
     .Bind(builder.Configuration.GetSection(KafkaOptions.SectionName));
@@ -62,6 +65,7 @@ builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITransferService, TransferService>();
 builder.Services.AddHostedService<IdempotencyKeyCleanupService>();
+builder.Services.AddHostedService<OutboxPublisher>();
 // TODO (Owner A): outbox publisher (BackgroundService)
 
 builder.Services.AddControllers();
@@ -117,6 +121,7 @@ using (var scope = app.Services.CreateScope())
 
 await AdminSeeder.SeedAdminAsync(app.Services);
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseExceptionHandler(_ => { });
 app.UseSerilogRequestLogging();
 
