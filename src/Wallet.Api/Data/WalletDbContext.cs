@@ -22,6 +22,7 @@ public class WalletDbContext : DbContext
     public DbSet<TopUp> TopUps { get; set; }
     public DbSet<Transfer> Transfers { get; set; }
     public DbSet<IdempotencyKey> IdempotencyKeys { get; set; }
+    public DbSet<OutboxMessage> OutboxMessages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -85,16 +86,30 @@ public class WalletDbContext : DbContext
                 .HasForeignKey(transfer => transfer.ToWalletId).OnDelete(DeleteBehavior.Restrict);
         });
 
-            modelBuilder.Entity<IdempotencyKey>(entity =>
-            {
-                entity.ToTable("IdempotencyKeys");
-                entity.HasKey(key => new { key.UserId, key.Key });
-                entity.Property(key => key.Key).HasColumnName("IdempotencyKey");
-                entity.Property(key => key.RequestHash).HasColumnType("binary(32)").IsRequired();
-                entity.HasIndex(key => key.ExpiresAt);
-                entity.HasOne<User>().WithMany().HasForeignKey(key => key.UserId).OnDelete(DeleteBehavior.Restrict);
-                entity.HasOne<Transfer>().WithMany().HasForeignKey(key => key.TransferId).OnDelete(DeleteBehavior.Restrict);
-            });
+        modelBuilder.Entity<IdempotencyKey>(entity =>
+        {
+            entity.ToTable("IdempotencyKeys");
+            entity.HasKey(key => new { key.UserId, key.Key });
+            entity.Property(key => key.Key).HasColumnName("IdempotencyKey");
+            entity.Property(key => key.RequestHash).HasColumnType("binary(32)").IsRequired();
+            entity.HasIndex(key => key.ExpiresAt);
+            entity.HasOne<User>().WithMany().HasForeignKey(key => key.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Transfer>().WithMany().HasForeignKey(key => key.TransferId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OutboxMessage>(entity =>
+        {
+            entity.Property(message => message.EventType).HasMaxLength(100);
+            entity.Property(message => message.Topic).HasMaxLength(200);
+            entity.Property(message => message.MessageKey).HasMaxLength(50);
+            entity.Property(message => message.CorrelationId).HasMaxLength(64);
+            entity.Property(message => message.LastError).HasMaxLength(1000);
+            entity.HasIndex(message => message.EventId).IsUnique();
+            // The publisher only ever looks for unsent rows: keep that index tiny.
+            entity.HasIndex(message => message.Id)
+                .HasDatabaseName("IX_OutboxMessages_Unsent")
+                .HasFilter("[SentAt] IS NULL");
+        });
 
         modelBuilder.Entity<TopUp>(entity =>
         {

@@ -24,7 +24,7 @@ public class TransferService : ITransferService
         _logger = logger;
     }
 
-    public async Task<Result<TransferOutcome>> CreateTransferAsync(int fromUserId, string createdBy, Guid idempotencyKey, CreateTransferDto request)
+    public async Task<Result<TransferOutcome>> CreateTransferAsync(int fromUserId, string createdBy, Guid idempotencyKey, string correlationId, CreateTransferDto request)
     {
         var toUsername = request.ToUsername.Trim();
         if (request.Amount % 1 != 0)
@@ -41,12 +41,13 @@ public class TransferService : ITransferService
         try
         {
             await _context.Database.ExecuteSqlRawAsync(
-                "EXEC wallet.usp_Transfer @FromUserId, @ToUsername, @Amount, @CreatedBy, @IdempotencyKey, @TransferId OUTPUT, @NewBalance OUTPUT, @Replayed OUTPUT",
+                "EXEC wallet.usp_Transfer @FromUserId, @ToUsername, @Amount, @CreatedBy, @IdempotencyKey, @CorrelationId, @TransferId OUTPUT, @NewBalance OUTPUT, @Replayed OUTPUT",
                 new SqlParameter("@FromUserId", fromUserId),
                 new SqlParameter("@ToUsername", SqlDbType.NVarChar, 50) { Value = toUsername },
                 new SqlParameter("@Amount", SqlDbType.Decimal) { Value = request.Amount, Precision = 18, Scale = 2 },
                 new SqlParameter("@CreatedBy", SqlDbType.NVarChar, 256) { Value = createdBy },
                 new SqlParameter("@IdempotencyKey", SqlDbType.UniqueIdentifier) { Value = idempotencyKey },
+                new SqlParameter("@CorrelationId", SqlDbType.NVarChar, 64) { Value = correlationId },
                 transferId,
                 newBalance,
                 replayed);
