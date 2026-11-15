@@ -21,7 +21,7 @@ public class WalletDbContext : DbContext
     public DbSet<Wallet> Wallets { get; set; }
     public DbSet<TopUp> TopUps { get; set; }
     public DbSet<Transfer> Transfers { get; set; }
-    // TODO (Owner A): IdempotencyKeys, Outbox
+    public DbSet<IdempotencyKey> IdempotencyKeys { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,6 +73,7 @@ public class WalletDbContext : DbContext
                 table.HasCheckConstraint("CK_Transfers_DifferentWallets", "[FromWalletId] <> [ToWalletId]");
             });
             entity.Property(transfer => transfer.Amount).HasPrecision(18, 2);
+            entity.Property(transfer => transfer.FromBalanceAfter).HasPrecision(18, 2);
             entity.Property(transfer => transfer.Currency).HasMaxLength(3).IsFixedLength();
             entity.Property(transfer => transfer.CreatedBy).HasMaxLength(256);
             // History queries are "my transfers, newest first", sent or received.
@@ -83,6 +84,17 @@ public class WalletDbContext : DbContext
             entity.HasOne(transfer => transfer.ToWallet).WithMany()
                 .HasForeignKey(transfer => transfer.ToWalletId).OnDelete(DeleteBehavior.Restrict);
         });
+
+            modelBuilder.Entity<IdempotencyKey>(entity =>
+            {
+                entity.ToTable("IdempotencyKeys");
+                entity.HasKey(key => new { key.UserId, key.Key });
+                entity.Property(key => key.Key).HasColumnName("IdempotencyKey");
+                entity.Property(key => key.RequestHash).HasColumnType("binary(32)").IsRequired();
+                entity.HasIndex(key => key.ExpiresAt);
+                entity.HasOne<User>().WithMany().HasForeignKey(key => key.UserId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Transfer>().WithMany().HasForeignKey(key => key.TransferId).OnDelete(DeleteBehavior.Restrict);
+            });
 
         modelBuilder.Entity<TopUp>(entity =>
         {

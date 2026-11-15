@@ -16,13 +16,25 @@ public class TransfersController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<TransferResultDto>> CreateTransfer(CreateTransferDto request)
+    public async Task<ActionResult<TransferResultDto>> CreateTransfer(
+        CreateTransferDto request,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey)
     {
+        if (!Guid.TryParse(idempotencyKey, out var key))
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "A valid Idempotency-Key UUID header is required."
+            });
+
         var username = User.Identity?.Name ?? "unknown";
-        var result = await _transferService.CreateTransferAsync(User.GetUserId(), username, request);
+        var result = await _transferService.CreateTransferAsync(User.GetUserId(), username, key, request);
         if (!result.IsSuccess)
             return this.ToActionResult(result);
 
-        return Ok(result.Value);
+        if (result.Value!.Replayed)
+            Response.Headers["Idempotent-Replayed"] = "true";
+
+        return StatusCode(StatusCodes.Status201Created, result.Value.Transfer);
     }
 }

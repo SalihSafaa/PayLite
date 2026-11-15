@@ -22,9 +22,9 @@ public class TransferIntegrationTests : IClassFixture<WalletApiFactory>
         var alice = await CreateUserAsync(balance: 10_000);
         var bob = await CreateUserAsync();
 
-        var response = await alice.Client.PostAsJsonAsync("/api/transfers", new { toUsername = bob.Username, amount = 2_500 });
+        var response = await PostTransferAsync(alice.Client, bob.Username, 2_500m);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<TransferResultDto>();
         Assert.Equal(7_500m, result!.NewBalance);
         Assert.Equal(7_500m, await GetBalanceAsync(alice.Client));
@@ -38,7 +38,7 @@ public class TransferIntegrationTests : IClassFixture<WalletApiFactory>
         var alice = await CreateUserAsync(balance: 1_000);
         var bob = await CreateUserAsync();
 
-        var response = await alice.Client.PostAsJsonAsync("/api/transfers", new { toUsername = bob.Username, amount = 1_001 });
+        var response = await PostTransferAsync(alice.Client, bob.Username, 1_001m);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal(1_000m, await GetBalanceAsync(alice.Client));
@@ -51,7 +51,7 @@ public class TransferIntegrationTests : IClassFixture<WalletApiFactory>
     {
         var alice = await CreateUserAsync(balance: 1_000);
 
-        var response = await alice.Client.PostAsJsonAsync("/api/transfers", new { toUsername = "nobody_by_this_name", amount = 10 });
+        var response = await PostTransferAsync(alice.Client, "nobody_by_this_name", 10m);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -61,7 +61,7 @@ public class TransferIntegrationTests : IClassFixture<WalletApiFactory>
     {
         var alice = await CreateUserAsync(balance: 1_000);
 
-        var response = await alice.Client.PostAsJsonAsync("/api/transfers", new { toUsername = alice.Username, amount = 10 });
+        var response = await PostTransferAsync(alice.Client, alice.Username, 10m);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(1_000m, await GetBalanceAsync(alice.Client));
@@ -84,10 +84,10 @@ public class TransferIntegrationTests : IClassFixture<WalletApiFactory>
 
         var statuses = await FireTogetherAsync(Enumerable.Range(0, 20).Select(_ =>
             (Func<Task<HttpStatusCode>>)(async () =>
-                (await alice.Client.PostAsJsonAsync("/api/transfers", new { toUsername = bob.Username, amount = 1_000 })).StatusCode)));
+                (await PostTransferAsync(alice.Client, bob.Username, 1_000m)).StatusCode)));
 
         var summary = string.Join(", ", statuses.GroupBy(s => s).Select(g => $"{(int)g.Key} x{g.Count()}"));
-        Assert.True(statuses.Count(s => s == HttpStatusCode.OK) == 10, summary);
+        Assert.True(statuses.Count(s => s == HttpStatusCode.Created) == 10, summary);
         Assert.True(statuses.Count(s => s == HttpStatusCode.Conflict) == 10, summary);
         Assert.Equal(0m, await GetBalanceAsync(alice.Client));
         Assert.Equal(10_000m, await GetBalanceAsync(bob.Client));
@@ -102,14 +102,14 @@ public class TransferIntegrationTests : IClassFixture<WalletApiFactory>
         var bob = await CreateUserAsync(balance: 100_000);
 
         var aliceToBob = Enumerable.Range(0, 20).Select(_ => (Func<Task<HttpStatusCode>>)(async () =>
-            (await alice.Client.PostAsJsonAsync("/api/transfers", new { toUsername = bob.Username, amount = 1_000 })).StatusCode));
+            (await PostTransferAsync(alice.Client, bob.Username, 1_000m)).StatusCode));
         var bobToAlice = Enumerable.Range(0, 20).Select(_ => (Func<Task<HttpStatusCode>>)(async () =>
-            (await bob.Client.PostAsJsonAsync("/api/transfers", new { toUsername = alice.Username, amount = 1_000 })).StatusCode));
+            (await PostTransferAsync(bob.Client, alice.Username, 1_000m)).StatusCode));
 
         var statuses = await FireTogetherAsync(aliceToBob.Concat(bobToAlice));
 
         var summary = string.Join(", ", statuses.GroupBy(s => s).Select(g => $"{(int)g.Key} x{g.Count()}"));
-        Assert.True(statuses.All(s => s == HttpStatusCode.OK), summary);
+        Assert.True(statuses.All(s => s == HttpStatusCode.Created), summary);
         Assert.Equal(100_000m, await GetBalanceAsync(alice.Client));
         Assert.Equal(100_000m, await GetBalanceAsync(bob.Client));
         Assert.Equal(20, await CountTransfersFromAsync(alice.WalletId));
@@ -156,6 +156,17 @@ public class TransferIntegrationTests : IClassFixture<WalletApiFactory>
 
     private static async Task<decimal> GetBalanceAsync(HttpClient client) =>
         (await client.GetFromJsonAsync<WalletDto>("/api/wallets/me"))!.Balance;
+
+    private static Task<HttpResponseMessage> PostTransferAsync(HttpClient client, string toUsername, decimal amount, Guid? idempotencyKey = null)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/transfers")
+        {
+            Content = JsonContent.Create(new { toUsername, amount })
+        };
+
+        request.Headers.Add("Idempotency-Key", (idempotencyKey ?? Guid.NewGuid()).ToString());
+        return client.SendAsync(request);
+    }
 
     private async Task<int> CountTransfersFromAsync(int walletId)
     {
