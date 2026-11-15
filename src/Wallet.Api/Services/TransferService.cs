@@ -86,4 +86,76 @@ public class TransferService : ITransferService
             NewBalance = (decimal)newBalance.Value
         }, wasReplayed));
     }
+
+    public async Task<Result<PagedResponseDto<TransferHistoryItemDto>>> GetHistoryAsync(int userId, PageRequestDto page)
+    {
+        var walletId = await GetWalletIdAsync(userId);
+        if (walletId is null)
+            return Result<PagedResponseDto<TransferHistoryItemDto>>.Failure(ErrorType.NotFound, "Wallet not found.");
+
+        // Sent OR received. SQL Server can serve each side from its own index
+        // (FromWalletId, CreatedAt) / (ToWalletId, CreatedAt). Id breaks ties in the same instant.
+        var query = _context.Transfers.AsNoTracking()
+            .Where(t => t.FromWalletId == walletId || t.ToWalletId == walletId);
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id)
+            .Skip((page.Page - 1) * page.PageSize)
+            .Take(page.PageSize)
+            .Select(t => new TransferHistoryItemDto
+            {
+                TransferId = t.Id,
+                Direction = t.FromWalletId == walletId ? TransferDirection.Sent : TransferDirection.Received,
+                CounterpartyUsername = t.FromWalletId == walletId ? t.ToWallet.User.Username : t.FromWallet.User.Username,
+                Amount = t.Amount,
+                Currency = t.Currency,
+                CreatedAt = t.CreatedAt,
+                BalanceAfter = t.FromWalletId == walletId ? t.FromBalanceAfter : null
+            })
+            .ToListAsync();
+
+        return Result<PagedResponseDto<TransferHistoryItemDto>>.Success(new PagedResponseDto<TransferHistoryItemDto>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = page.Page,
+            PageSize = page.PageSize
+        });
+    }
+
+    public async Task<Result<PagedResponseDto<MerchantPaymentDto>>> GetMerchantPaymentsAsync(int merchantUserId, PageRequestDto page)
+    {
+        var walletId = await GetWalletIdAsync(merchantUserId);
+        if (walletId is null)
+            return Result<PagedResponseDto<MerchantPaymentDto>>.Failure(ErrorType.NotFound, "Wallet not found.");
+
+        var query = _context.Transfers.AsNoTracking().Where(t => t.ToWalletId == walletId);
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id)
+            .Skip((page.Page - 1) * page.PageSize)
+            .Take(page.PageSize)
+            .Select(t => new MerchantPaymentDto
+            {
+                TransferId = t.Id,
+                FromUsername = t.FromWallet.User.Username,
+                Amount = t.Amount,
+                Currency = t.Currency,
+                CreatedAt = t.CreatedAt
+            })
+            .ToListAsync();
+
+        return Result<PagedResponseDto<MerchantPaymentDto>>.Success(new PagedResponseDto<MerchantPaymentDto>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            Page = page.Page,
+            PageSize = page.PageSize
+        });
+    }
+
+    private Task<int?> GetWalletIdAsync(int userId) =>
+        _context.Wallets.Where(w => w.UserId == userId).Select(w => (int?)w.Id).SingleOrDefaultAsync();
 }

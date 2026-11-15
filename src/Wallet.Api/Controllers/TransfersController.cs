@@ -16,6 +16,17 @@ public class TransfersController : ControllerBase
         _transferService = transferService;
     }
 
+    /// <summary>The caller's transfers, sent and received, newest first.</summary>
+    [HttpGet]
+    public async Task<ActionResult<PagedResponseDto<TransferHistoryItemDto>>> GetHistory([FromQuery] PageRequestDto paging)
+    {
+        var result = await _transferService.GetHistoryAsync(User.GetUserId(), paging);
+        if (!result.IsSuccess)
+            return this.ToActionResult(result);
+
+        return Ok(result.Value);
+    }
+
     [HttpPost]
     [ProducesResponseType<TransferResultDto>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
