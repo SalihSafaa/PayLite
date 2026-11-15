@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
@@ -10,6 +11,10 @@ const activity = process.env.ACTIVITY_SERVICE_URL ?? 'http://localhost:8082'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // `npm test`: component tests run in a fake browser (jsdom), with no backend.
+  test: {
+    environment: 'jsdom',
+  },
   server: {
     port: 5173,
     proxy: {
