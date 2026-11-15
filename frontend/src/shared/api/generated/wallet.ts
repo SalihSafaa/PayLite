@@ -215,6 +215,159 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/merchants/me/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MerchantPaymentDtoPagedResponseDto"];
+                        "application/json": components["schemas"]["MerchantPaymentDtoPagedResponseDto"];
+                        "text/json": components["schemas"]["MerchantPaymentDtoPagedResponseDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TransferHistoryItemDtoPagedResponseDto"];
+                        "application/json": components["schemas"]["TransferHistoryItemDtoPagedResponseDto"];
+                        "text/json": components["schemas"]["TransferHistoryItemDtoPagedResponseDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "Idempotency-Key"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateTransferDto"];
+                    "text/json": components["schemas"]["CreateTransferDto"];
+                    "application/*+json": components["schemas"]["CreateTransferDto"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TransferResultDto"];
+                        "application/json": components["schemas"]["TransferResultDto"];
+                        "text/json": components["schemas"]["TransferResultDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Content */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/wallets/me": {
         parameters: {
             query?: never;
@@ -299,6 +452,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        CreateTransferDto: {
+            toUsername: string;
+            /** Format: double */
+            amount: number;
+        };
         LoginRequestDto: {
             username: string;
             password: string;
@@ -306,6 +464,35 @@ export interface components {
         LoginResponseDto: {
             accessToken: string;
             refreshToken: string;
+        };
+        MerchantPaymentDto: {
+            /** Format: int64 */
+            transferId: number;
+            fromUsername: string;
+            /** Format: double */
+            amount: number;
+            currency: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        MerchantPaymentDtoPagedResponseDto: {
+            items: components["schemas"]["MerchantPaymentDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        ProblemDetails: {
+            type?: string | null;
+            title?: string | null;
+            /** Format: int32 */
+            status?: number | null;
+            detail?: string | null;
+            instance?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         RefreshRequestDto: {
             refreshToken: string;
@@ -318,6 +505,38 @@ export interface components {
         TopUpRequestDto: {
             /** Format: double */
             amount: number;
+        };
+        TransferHistoryItemDto: {
+            /** Format: int64 */
+            transferId: number;
+            direction: string;
+            counterpartyUsername: string;
+            /** Format: double */
+            amount: number;
+            currency: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: double */
+            balanceAfter?: number | null;
+        };
+        TransferHistoryItemDtoPagedResponseDto: {
+            items: components["schemas"]["TransferHistoryItemDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        TransferResultDto: {
+            /** Format: int64 */
+            transferId: number;
+            toUsername: string;
+            /** Format: double */
+            amount: number;
+            currency: string;
+            /** Format: double */
+            newBalance: number;
         };
         UserResponseDto: {
             /** Format: int32 */

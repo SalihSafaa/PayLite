@@ -24,3 +24,34 @@ public class TransferResultDto
 }
 
 public sealed record TransferOutcome(TransferResultDto Transfer, bool Replayed);
+
+public static class TransferDirection
+{
+    public const string Sent = "Sent";
+    public const string Received = "Received";
+}
+
+/// <summary>One row of the caller's transfer history (GET /api/transfers).</summary>
+public class TransferHistoryItemDto
+{
+    public long TransferId { get; set; }
+    /// <summary>"Sent" or "Received", seen from the caller's side.</summary>
+    public string Direction { get; set; } = string.Empty;
+    /// <summary>The other side: the recipient for sent items, the sender for received ones.</summary>
+    public string CounterpartyUsername { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    /// <summary>The caller's balance right after a sent transfer; null for received items.</summary>
+    public decimal? BalanceAfter { get; set; }
+}
+
+/// <summary>One incoming payment to a merchant (GET /api/merchants/me/payments).</summary>
+public class MerchantPaymentDto
+{
+    public long TransferId { get; set; }
+    public string FromUsername { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}
