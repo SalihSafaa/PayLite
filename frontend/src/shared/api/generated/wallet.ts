@@ -225,8 +225,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    Page?: number;
-                    PageSize?: number;
+                    page?: number;
+                    pageSize?: number;
                 };
                 header?: never;
                 path?: never;
@@ -265,8 +265,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    Page?: number;
-                    PageSize?: number;
+                    page?: number;
+                    pageSize?: number;
                 };
                 header?: never;
                 path?: never;
