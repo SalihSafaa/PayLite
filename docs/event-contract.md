@@ -33,12 +33,17 @@ Serialize with `EventJson.Options` on both sides (camelCase).
 {
   "transferId": 1042,
   "fromWalletId": 11,
+  "fromUserId": 5,
+  "fromUsername": "ali",
   "toWalletId": 27,
+  "toUserId": 9,
   "toIsMerchant": true,
   "amount": 25000,
   "currency": "IQD"
 }
 ```
+
+`fromUserId`, `fromUsername` and `toUserId` are there because the Activity Service never reads `WalletDb`: `toUserId` is the JWT user id of the person to notify (and the merchant for the daily summary), and `fromUsername` is shown in the notification text.
 
 ## Topics and keys
 

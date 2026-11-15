@@ -10,7 +10,10 @@ namespace PayLite.Contracts;
 public sealed record TransferCompletedData(
     long TransferId,
     int FromWalletId,
+    int FromUserId,
+    string FromUsername,
     int ToWalletId,
+    int ToUserId,
     bool ToIsMerchant,
     decimal Amount,
     string Currency)
