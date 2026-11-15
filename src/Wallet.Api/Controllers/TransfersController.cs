@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PayLite.Contracts;
 
 namespace PayLite.WalletApi;
 
@@ -16,16 +17,18 @@ public class TransfersController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType<TransferResultDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<TransferResultDto>> CreateTransfer(
         CreateTransferDto request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey)
+        [FromHeader(Name = CorrelationHeaders.IdempotencyKey)] string? idempotencyKey)
     {
         if (!Guid.TryParse(idempotencyKey, out var key))
-            return BadRequest(new ProblemDetails
-            {
-                Status = StatusCodes.Status400BadRequest,
-                Title = "A valid Idempotency-Key UUID header is required."
-            });
+            return this.ToActionResult(Result<TransferOutcome>.Failure(
+                ErrorType.Validation, "A valid Idempotency-Key UUID header is required."));
 
         var username = User.Identity?.Name ?? "unknown";
         var correlationId = CorrelationIdMiddleware.Get(HttpContext);
