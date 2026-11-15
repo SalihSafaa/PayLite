@@ -1,7 +1,37 @@
+import { Link } from 'react-router'
 import { ProblemDetailsAlert } from '../../shared/components/ProblemDetailsAlert'
 import { formatMoney } from '../../shared/lib/money'
 import { TopUpForm } from './TopUpForm'
+import { TransferTable } from './TransferTable'
 import { useMyWallet } from './useMyWallet'
+import { useTransferHistory } from './useTransferHistory'
+
+function RecentTransactions() {
+    const { data, loading, problem, reload } = useTransferHistory(1, 5)
+
+    if (loading) return <p className="muted">Loading transactions…</p>
+    if (problem) {
+        return (
+            <>
+                <ProblemDetailsAlert problem={problem} />
+                <button type="button" onClick={reload}>Try again</button>
+            </>
+        )
+    }
+    if (!data || data.totalCount === 0) {
+        return (
+            <p className="muted">
+                No transactions yet. <Link to="/send">Send money</Link>
+            </p>
+        )
+    }
+    return (
+        <>
+            <TransferTable items={data.items} />
+            {data.totalCount > data.items.length && <Link to="/history">See all {data.totalCount} transactions</Link>}
+        </>
+    )
+}
 
 export function WalletDashboardPage() {
     const { wallet, setWallet, loading, problem, reload } = useMyWallet()
@@ -30,8 +60,7 @@ export function WalletDashboardPage() {
             </div>
             <div className="card">
                 <h2>Recent transactions</h2>
-                {/* TODO (Day 5): last 5 transfers from GET /api/transfers?page=1&pageSize=5 */}
-                <p className="muted">No transactions yet.</p>
+                <RecentTransactions />
             </div>
         </section>
     )
