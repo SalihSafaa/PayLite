@@ -34,6 +34,14 @@ public class WalletApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
         await using var context = new WalletDbContext(options);
         await context.Database.MigrateAsync();
+
+        // Exercise the latest migration's Down and Up paths against the real SQL Server provider.
+        var migrations = context.Database.GetMigrations().ToArray();
+        if (migrations.Length > 1)
+        {
+            await context.Database.MigrateAsync(migrations[^2]);
+            await context.Database.MigrateAsync();
+        }
     }
 
     public new async Task DisposeAsync()

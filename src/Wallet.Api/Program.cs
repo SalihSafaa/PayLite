@@ -61,6 +61,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITransferService, TransferService>();
+builder.Services.AddHostedService<IdempotencyKeyCleanupService>();
 // TODO (Owner A): outbox publisher (BackgroundService)
 
 builder.Services.AddControllers();

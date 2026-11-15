@@ -23,6 +23,37 @@ namespace PayLite.WalletApi.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("PayLite.WalletApi.IdempotencyKey", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("Key")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("IdempotencyKey");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RequestHash")
+                        .IsRequired()
+                        .HasColumnType("binary(32)");
+
+                    b.Property<long>("TransferId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("UserId", "Key");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("TransferId");
+
+                    b.ToTable("IdempotencyKeys", "wallet");
+                });
+
             modelBuilder.Entity("PayLite.WalletApi.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
@@ -141,6 +172,10 @@ namespace PayLite.WalletApi.Migrations
                         .HasColumnType("nchar(3)")
                         .IsFixedLength();
 
+                    b.Property<decimal?>("FromBalanceAfter")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("FromWalletId")
                         .HasColumnType("int");
 
@@ -250,6 +285,21 @@ namespace PayLite.WalletApi.Migrations
                         {
                             t.HasCheckConstraint("CK_Wallets_Balance_NonNegative", "[Balance] >= 0");
                         });
+                });
+
+            modelBuilder.Entity("PayLite.WalletApi.IdempotencyKey", b =>
+                {
+                    b.HasOne("PayLite.WalletApi.Transfer", null)
+                        .WithMany()
+                        .HasForeignKey("TransferId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PayLite.WalletApi.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PayLite.WalletApi.RefreshToken", b =>

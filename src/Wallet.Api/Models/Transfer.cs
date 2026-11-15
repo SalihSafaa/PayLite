@@ -12,6 +12,7 @@ public class Transfer
     public int ToWalletId { get; set; }
     public Wallet ToWallet { get; set; } = null!;
     public decimal Amount { get; set; }
+    public decimal? FromBalanceAfter { get; set; }
     public string Currency { get; set; } = WalletDefaults.Currency;
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;

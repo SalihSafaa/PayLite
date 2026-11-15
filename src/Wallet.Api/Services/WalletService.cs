@@ -37,6 +37,12 @@ public class WalletService : IWalletService
 
     public async Task<Result<WalletDto>> TopUpAsync(int userId, TopUpRequestDto request)
     {
+        if (request.Amount % 1 != 0)
+        {
+            return Result<WalletDto>.Failure(ErrorType.Validation,
+                "IQD amounts must be whole dinars.");
+        }
+
         if (request.Amount > _options.MaxTopUpAmount)
         {
             return Result<WalletDto>.Failure(ErrorType.Validation,

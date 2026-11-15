@@ -8,7 +8,8 @@ public class CreateTransferDto
     [StringLength(50, MinimumLength = 3, ErrorMessage = "Recipient username must be between 3 and 50 characters long.")]
     public string ToUsername { get; set; } = string.Empty;
 
-    [Range(typeof(decimal), "0.01", "79228162514264337593543950335", ErrorMessage = "Amount must be greater than zero.")]
+    // IQD has no fractional unit; runtime maximum is Wallet:MaxTransferAmount.
+    [Range(typeof(decimal), "1", "79228162514264337593543950335", ErrorMessage = "Amount must be at least one whole dinar.")]
     public decimal Amount { get; set; }
 }
 
@@ -21,3 +22,5 @@ public class TransferResultDto
     /// <summary>The sender's balance after the transfer.</summary>
     public decimal NewBalance { get; set; }
 }
+
+public sealed record TransferOutcome(TransferResultDto Transfer, bool Replayed);
