@@ -28,7 +28,8 @@ public class TransfersController : ControllerBase
             });
 
         var username = User.Identity?.Name ?? "unknown";
-        var result = await _transferService.CreateTransferAsync(User.GetUserId(), username, key, request);
+        var correlationId = CorrelationIdMiddleware.Get(HttpContext);
+        var result = await _transferService.CreateTransferAsync(User.GetUserId(), username, key, correlationId, request);
         if (!result.IsSuccess)
             return this.ToActionResult(result);
 

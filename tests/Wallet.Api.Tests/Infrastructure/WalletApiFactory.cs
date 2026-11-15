@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Confluent.Kafka;
+using Confluent.Kafka.Admin;
+using PayLite.Contracts;
 using Testcontainers.Kafka;
 using Testcontainers.MsSql;
 
@@ -27,6 +30,7 @@ public class WalletApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public async Task InitializeAsync()
     {
         await Task.WhenAll(_sql.StartAsync(), _kafka.StartAsync());
+        await CreateTopicsAsync();
 
         var options = new DbContextOptionsBuilder<WalletDbContext>()
             .UseSqlServer(SqlConnectionString)
@@ -42,6 +46,21 @@ public class WalletApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             await context.Database.MigrateAsync(migrations[^2]);
             await context.Database.MigrateAsync();
         }
+    }
+
+    /// <summary>Freezes the broker (like `docker compose pause kafka`) for the Kafka-down scenario.</summary>
+    public Task PauseKafkaAsync() => _kafka.PauseAsync();
+    public Task UnpauseKafkaAsync() => _kafka.UnpauseAsync();
+
+    /// <summary>Same topics as the kafka-init service in docker-compose.yml.</summary>
+    private async Task CreateTopicsAsync()
+    {
+        using var admin = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = KafkaBootstrapServers }).Build();
+        await admin.CreateTopicsAsync(
+        [
+            new TopicSpecification { Name = Topics.Transfers, NumPartitions = 3, ReplicationFactor = 1 },
+            new TopicSpecification { Name = Topics.TransfersDeadLetter, NumPartitions = 3, ReplicationFactor = 1 }
+        ]);
     }
 
     public new async Task DisposeAsync()
@@ -69,5 +88,7 @@ public class WalletApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
         builder.UseSetting("Jwt:Key", TestJwt.Key);
         builder.UseSetting("Kafka:BootstrapServers", KafkaBootstrapServers);
+        // Short back-off so the Kafka-down test doesn't wait 30s after the broker returns.
+        builder.UseSetting("Outbox:MaxBackoffSeconds", "2");
     }
 }
