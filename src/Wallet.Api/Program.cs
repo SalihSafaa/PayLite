@@ -6,10 +6,18 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using PayLite.WalletApi;
 using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Serilog is configured here, not from the "Logging" section of appsettings.
+// Framework noise is turned down so a transfer's own lines are easy to follow in the demo:
+// UseSerilogRequestLogging below still writes one line per request, and the outbox poll's
+// SELECT no longer shows up every second. Failed SQL commands are still logged as errors.
 Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{CorrelationId}] {Message:lj}{NewLine}{Exception}")
     .WriteTo.File("logs/wallet-log.txt", rollingInterval: RollingInterval.Day)

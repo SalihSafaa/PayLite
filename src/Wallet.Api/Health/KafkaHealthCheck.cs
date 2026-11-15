@@ -15,10 +15,12 @@ namespace PayLite.WalletApi;
 public class KafkaHealthCheck : IHealthCheck
 {
     private readonly KafkaOptions _options;
+    private readonly ILogger<KafkaHealthCheck> _logger;
 
-    public KafkaHealthCheck(IOptions<KafkaOptions> options)
+    public KafkaHealthCheck(IOptions<KafkaOptions> options, ILogger<KafkaHealthCheck> logger)
     {
         _options = options.Value;
+        _logger = logger;
     }
 
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
@@ -29,7 +31,9 @@ public class KafkaHealthCheck : IHealthCheck
             {
                 BootstrapServers = _options.BootstrapServers,
                 SocketTimeoutMs = 3000
-            }).Build();
+            })
+                .SetLogHandler((_, log) => _logger.LogDebug("librdkafka {Facility}: {Message}", log.Facility, log.Message))
+                .Build();
 
             var metadata = admin.GetMetadata(TimeSpan.FromSeconds(3));
             return Task.FromResult(metadata.Brokers.Count > 0

@@ -35,7 +35,12 @@ public sealed class OutboxPublisher : BackgroundService
             EnableIdempotence = true,
             // Fail a send after 10s instead of the 5-minute default, so a dead broker is noticed quickly.
             MessageTimeoutMs = 10_000
-        }).Build();
+        })
+            // librdkafka prints its own logs to stderr by default (no correlation id, twice a second
+            // while Kafka is down). Send them through our logger at Debug; the "Could not publish"
+            // warning below is the line that matters.
+            .SetLogHandler((_, log) => _logger.LogDebug("librdkafka {Facility}: {Message}", log.Facility, log.Message))
+            .Build();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
