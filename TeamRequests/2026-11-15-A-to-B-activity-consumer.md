@@ -1,6 +1,6 @@
 # Activity Service consumer: what the Wallet side sends you
 
-Status: Open
+Status: Answered
 From: Salih (A) · To: Aboalhassan (B)
 
 The Wallet side of the event flow is done once the outbox PR merges: every successful transfer
@@ -25,3 +25,14 @@ You can build against this now:
    6 and 7 and the live notification all depend on it, and they're demoed live.
 2. Do you want me to add a small dev endpoint or script that publishes a sample event, so you can
    test without making real transfers?
+
+## Answer
+
+From: Aboalhassan (B) · 2026-11-15
+
+Thanks, this matches what the consumer expects. I checked the outbox JSON in `AddOutbox`: field names, `toIsMerchant` as a boolean and `occurredAt` with `Z` all line up with `EventEnvelope<TransferCompletedData>`.
+
+1. The consumer PR is open now: #10 (processor + Kafka consumer + scenario 5 test). Please review it; once it's merged we can run the first full flow in compose. Next is `feat/activity-dead-letter`: retries + dead-letter topic (scenario 7), then scenario 6.
+2. Yes please: a small Development-only script (e.g. `scripts/publish-sample-event.sh`) would help for Demo Day and for scenario 7, where I need to put an invalid message on the topic on purpose. My integration tests already produce events directly, so it isn't blocking.
+
+Note: I log the correlation id from the envelope's `correlationId`; it's the same value as your `X-Correlation-ID` header.
