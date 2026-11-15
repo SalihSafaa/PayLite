@@ -51,7 +51,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // Accept it in options.Events.OnMessageReceived ONLY when the path starts with /hubs/notifications.
     });
 
-// TODO (Owner B): Kafka consumer (BackgroundService), notification + summary services, SignalR hub
+builder.Services.AddScoped<TransferEventProcessor>();
+if (builder.Configuration.GetValue($"{KafkaOptions.SectionName}:ConsumerEnabled", true))
+{
+    builder.Services.AddHostedService<TransferEventsConsumer>();
+}
+
+// TODO (Owner B): notification + summary endpoints, SignalR hub
 builder.Services.AddControllers();
 builder.Services.AddDbContext<ActivityDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ActivityDb")));

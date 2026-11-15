@@ -6,4 +6,8 @@ public sealed class KafkaOptions
 
     /// <summary>e.g. "localhost:29092" from the host, "kafka:9092" inside compose.</summary>
     public string BootstrapServers { get; set; } = string.Empty;
+
+    public string ConsumerGroupId { get; set; } = "activity-service";
+
+    public bool ConsumerEnabled { get; set; } = true;
 }
