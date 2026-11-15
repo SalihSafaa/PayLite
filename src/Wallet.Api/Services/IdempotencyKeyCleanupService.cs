@@ -25,16 +25,18 @@ public sealed class IdempotencyKeyCleanupService : BackgroundService
                 await using var scope = _scopeFactory.CreateAsyncScope();
                 var context = scope.ServiceProvider.GetRequiredService<WalletDbContext>();
                 int deleted;
+                var totalDeleted = 0;
                 do
                 {
                     deleted = await context.Database.ExecuteSqlRawAsync(
                         "DELETE TOP (1000) FROM wallet.IdempotencyKeys WHERE ExpiresAt < SYSUTCDATETIME()",
                         stoppingToken);
+                    totalDeleted += deleted;
                 }
                 while (deleted == 1000 && !stoppingToken.IsCancellationRequested);
 
-                if (deleted > 0)
-                    _logger.LogInformation("Removed {DeletedCount} expired transfer idempotency keys", deleted);
+                if (totalDeleted > 0)
+                    _logger.LogInformation("Removed {DeletedCount} expired transfer idempotency keys", totalDeleted);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
