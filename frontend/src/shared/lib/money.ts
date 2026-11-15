@@ -1,5 +1,5 @@
 // The ONE money formatter used on every page, so amounts look the same everywhere.
-// TODO (Day 2, ADR-0001): confirm currency, minor units and locale.
+// See docs/adr/0001-money-representation.md. Display only: the UI never adds up money.
 // IQD has no fractional digits in everyday use, so none are shown.
 
 const formatters = new Map<string, Intl.NumberFormat>()

@@ -22,7 +22,7 @@ See [`docs/architecture.md`](docs/architecture.md) for the diagram and the routi
 
 | | Owner A: "Money in motion" | Owner B: "Reacting to events" |
 |---|---|---|
-| Person | _TODO (Day 1)_ | _TODO (Day 1)_ |
+| Person | Salih | Aboalhassan |
 | Service | Wallet API | Activity Service |
 | Database | `WalletDb` | `ActivityDb` |
 | Kafka | Producer (outbox + publisher) | Consumer (processed events, retries, dead-letter) |
@@ -31,18 +31,18 @@ See [`docs/architecture.md`](docs/architecture.md) for the diagram and the routi
 
 ### Shared work split
 
-_TODO (Day 1): one name per row. Nothing should be "we both kind of did it"._
+One name per row. The owner writes it and the other person reviews it. Changes to any of these still need both approvals.
 
 | Shared item | Owner |
 |---|---|
-| Event contract (`Shared.Contracts`, `docs/event-contract.md`) | |
-| ADR-0001 money · ADR-0002 idempotency · ADR-0003 tokens · ADR-0004 Kafka | |
-| `docker-compose.yml`, Dockerfiles, `db/init-app-logins.sql` | |
-| CI (`.github/workflows/ci.yml`) | |
-| Frontend shell: login, register, routing, API clients, token handling, error component | |
-| Correlation ID end to end | |
-| README, `docs/runbook.md` | |
-| Demo Day script | |
+| Event contract (`Shared.Contracts`, `docs/event-contract.md`) | Salih |
+| ADR-0001 money · ADR-0002 idempotency · ADR-0003 tokens · ADR-0004 Kafka | Aboalhassan |
+| `docker-compose.yml`, Dockerfiles, `db/init-app-logins.sql` | Salih |
+| CI (`.github/workflows/ci.yml`) | Aboalhassan |
+| Frontend shell: login, register, routing, API clients, token handling, error component | Salih |
+| Correlation ID end to end | Salih (generated and logged at the Wallet API edge, carried in the event); Aboalhassan logs it in the Activity Service |
+| README, `docs/runbook.md` | Aboalhassan |
+| Demo Day script | Aboalhassan |
 
 ## Tech stack
 
@@ -55,7 +55,7 @@ _TODO (Day 1): one name per row. Nothing should be "we both kind of did it"._
 - React 19, TypeScript strict, Vite, React Router, `openapi-typescript` + `openapi-fetch`, `@microsoft/signalr`, oxlint
 - Docker Compose, GitHub Actions
 
-Component library: _TODO (Day 1): pick MUI or Mantine together._ Until then the shell uses a few plain CSS rules in `frontend/src/index.css`.
+Component library: **Mantine** (chosen on Day 2). It's lighter than MUI, its components cover our needs (forms, tables, notifications, a simple chart through `@mantine/charts`), and it has built-in RTL support for the Arabic stretch goal. Until pages move to it, the shell uses a few plain CSS rules in `frontend/src/index.css`.
 
 ## Repository layout
 
@@ -201,6 +201,8 @@ cd frontend && npm run lint && npm run build
 - Keep PRs under ~400 changed lines. Use the PR template, and declare help or borrowed/AI-generated code.
 - Contracts before code: changes to `src/Shared.Contracts` need both owners' approval.
 - Daily notes in [`docs/standups.md`](docs/standups.md). Decisions in [`docs/adr/`](docs/adr).
+- Branch names: `type/short-description` (`feat/`, `fix/`, `docs/`, `test/`, `chore/`), for example `feat/activity-kafka-consumer`. One branch per PR, branched from the latest `main`, deleted after merge.
+- Merge only after the other owner has approved it with real review comments. Never merge your own PR without an approval.
 
 ## Failure scenarios
 
