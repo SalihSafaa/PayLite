@@ -27,7 +27,8 @@ in [`runbook.md`](runbook.md).
 | Step | Who | Show |
 |---|---|---|
 | Top up `ali` with 100,000 | Salih | Balance updates; `formatMoney` everywhere. |
-| `ali` sends 25,000 to `coffeeshop` | Salih | The **one-time code** dialog (demo code **123456**), then `201`; History shows it; Wallet log line with the correlation id. |
+| `ali` sends 25,000 to `coffeeshop` | Salih | The **one-time code** dialog (demo code **123456**), then the **receipt**: amount, recipient, transfer number, time, status, new balance. History shows it; Wallet log line with the correlation id. |
+| A transfer that fails | Salih | Send more than the balance: the **failure screen** says why ("Insufficient funds"), what was attempted, and that no money left the wallet; **Try again** retries the same transfer (same key). |
 | Show the card details | Salih | The card shows `•••• 1234`; **Show details** asks for the code, then shows number, expiry and CVV for 30 s. |
 | Right window | Aboalhassan | **The bell goes to 1 without a refresh**; Notifications page shows it; Daily summary shows 1 payment / 25,000 in the current hour; Incoming payments lists it. |
 | Follow one transfer | Aboalhassan | `docker compose logs wallet-api activity-service \| grep <id>`: the same id from the HTTP request to the Activity Service. |

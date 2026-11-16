@@ -21,6 +21,10 @@ public class TransferResultDto
     public string Currency { get; set; } = string.Empty;
     /// <summary>The sender's balance after the transfer.</summary>
     public decimal NewBalance { get; set; }
+    /// <summary>When the money moved (UTC). On a replayed request, the original transfer's time.</summary>
+    public DateTime CreatedAt { get; set; }
+    /// <summary>Always "Completed": a transfer only exists once the money has moved (see TransferStatus).</summary>
+    public string Status { get; set; } = TransferStatus.Completed;
 }
 
 public sealed record TransferOutcome(TransferResultDto Transfer, bool Replayed);

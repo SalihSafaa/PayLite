@@ -486,3 +486,26 @@ body {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.08em;
 }
+
+/* ---------- Send money result (receipt / failure) ---------- */
+
+.result-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* The Switch gradient as a thin strip on top, like the app bar. */
+.result-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--pl-gradient);
+}
+
+.result-amount {
+  font-size: 2rem;
+  line-height: 1.2;
+}

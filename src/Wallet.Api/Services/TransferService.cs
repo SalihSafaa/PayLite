@@ -88,13 +88,22 @@ public class TransferService : ITransferService
                 transferId.Value, fromUserId, request.Amount, toUsername);
         }
 
+        // When the transfer happened, for the receipt. On a replay this is the ORIGINAL transfer's time.
+        var id = (long)transferId.Value;
+        var createdAt = await _context.Transfers.AsNoTracking()
+            .Where(t => t.Id == id)
+            .Select(t => t.CreatedAt)
+            .SingleAsync();
+
         return Result<TransferOutcome>.Success(new TransferOutcome(new TransferResultDto
         {
-            TransferId = (long)transferId.Value,
+            TransferId = id,
             ToUsername = toUsername,
             Amount = request.Amount,
             Currency = WalletDefaults.Currency,
-            NewBalance = (decimal)newBalance.Value
+            NewBalance = (decimal)newBalance.Value,
+            CreatedAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc),
+            Status = TransferStatus.Completed
         }, wasReplayed));
     }
 

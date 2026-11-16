@@ -65,9 +65,13 @@ test('a double-clicked transfer is sent once and the merchant sees it live', asy
   await customerPage.keyboard.type('23456')
   await customerPage.getByRole('button', { name: 'Confirm and send' }).dblclick()
 
-  const status = customerPage.getByRole('status')
-  await expect(status).toContainText(`Sent IQD 2,500 to ${merchant}.`)
-  await expect(status).toContainText('New balance: IQD 97,500')
+  // The receipt: amount, recipient, status and the new balance.
+  const receipt = customerPage.getByRole('status')
+  await expect(receipt).toContainText('Money sent')
+  await expect(receipt).toContainText('IQD 2,500')
+  await expect(receipt).toContainText(merchant)
+  await expect(receipt).toContainText('Completed')
+  await expect(receipt).toContainText('IQD 97,500')
   expect(transferPosts).toHaveLength(1)
 
   // The merchant's page was never reloaded: the bell and the summary update over SignalR.

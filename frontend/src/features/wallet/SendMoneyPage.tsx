@@ -1,12 +1,11 @@
-import { Alert, Anchor, Button, Card, Chip, Divider, Grid, Group, Stack, Text, TextInput } from '@mantine/core'
-import { IconCircleCheck } from '@tabler/icons-react'
+import { Button, Card, Chip, Divider, Grid, Group, Stack, Text, TextInput } from '@mantine/core'
 import { useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
 import { walletApi } from '../../shared/api/clients'
 import type { components } from '../../shared/api/generated/wallet'
 import { toProblemDetails, type ProblemDetails } from '../../shared/api/problemDetails'
 import { OTP_HEADER, OTP_PROBLEM_TYPE, OtpModal } from '../../shared/components/OtpModal'
 import { ProblemDetailsAlert } from '../../shared/components/ProblemDetailsAlert'
+import { TransferFailure, TransferSuccess } from './TransferResult'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { formatMoney } from '../../shared/lib/money'
 import { useMyWallet } from './useMyWallet'
@@ -23,7 +22,12 @@ export function SendMoneyPage() {
     const [amount, setAmount] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [problem, setProblem] = useState<ProblemDetails | null>(null)
-    const [sent, setSent] = useState<{ transfer: TransferResultDto; replayed: boolean } | null>(null)
+    // After Confirm: the receipt, or what went wrong. Either one replaces the form.
+    const [result, setResult] = useState<
+        | { kind: 'success'; transfer: TransferResultDto; replayed: boolean }
+        | { kind: 'failure'; problem: ProblemDetails; attempted: { toUsername: string; amount: number }; uncertain: boolean }
+        | null
+    >(null)
     // One key per filled-in form, reused on every retry so the server never moves the money twice (ADR-0002).
     const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
     // A ref updates at once, so a fast double-click can't send before `submitting` re-renders the button.
@@ -38,7 +42,6 @@ export function SendMoneyPage() {
     function handleChange(setter: (value: string) => void, value: string) {
         setter(value)
         setIdempotencyKey(crypto.randomUUID())
-        setSent(null)
     }
 
     // Step 1: check the form, then ask for the code. Nothing is sent yet.
@@ -79,7 +82,6 @@ export function SendMoneyPage() {
         inFlight.current = true
         setSubmitting(true)
         setOtpError(null)
-        setSent(null)
         try {
             const { data, error, response } = await walletApi.POST('/api/transfers', {
                 params: { header: { [IDEMPOTENCY_HEADER]: idempotencyKey, [OTP_HEADER]: code } },
@@ -92,14 +94,15 @@ export function SendMoneyPage() {
                     setOtpError(problemDetails.title ?? 'The one-time code is wrong.')
                     return
                 }
-                // The key is kept, so pressing Send again is a real retry of the same transfer.
+                // The server answered with a refusal (404, 409, 403…): nothing moved.
+                // The key is kept, so "Try again" is a real retry of the same transfer.
                 setOtpOpen(false)
-                setProblem(problemDetails)
+                setResult({ kind: 'failure', problem: problemDetails, attempted: pending, uncertain: response.status >= 500 })
                 return
             }
             setOtpOpen(false)
             setPending(null)
-            setSent({ transfer: data, replayed: response.headers.get('Idempotent-Replayed') === 'true' })
+            setResult({ kind: 'success', transfer: data, replayed: response.headers.get('Idempotent-Replayed') === 'true' })
             if (wallet) setWallet({ ...wallet, balance: data.newBalance })
             setToUsername('')
             setAmount('')
@@ -107,7 +110,7 @@ export function SendMoneyPage() {
         } catch (err) {
             // Network error: we don't know if the server got it. Retrying with the same key is safe.
             setOtpOpen(false)
-            setProblem(toProblemDetails(err))
+            setResult({ kind: 'failure', problem: toProblemDetails(err), attempted: pending, uncertain: true })
         } finally {
             inFlight.current = false
             setSubmitting(false)
@@ -117,6 +120,49 @@ export function SendMoneyPage() {
     // Live preview, only a hint: the server checks the balance and has the final say.
     const previewAmount = /^\d+$/.test(amount.trim()) ? Number(amount) : null
     const balanceAfter = wallet && previewAmount !== null ? wallet.balance - previewAmount : null
+
+    const otpDialog = (
+        <OtpModal
+            opened={otpOpen}
+            title="Confirm with your code"
+            description={pending ? `Enter the 6-digit code to send ${formatMoney(pending.amount)} to ${pending.toUsername}.` : ''}
+            confirmLabel={submitting ? 'Sending…' : 'Confirm and send'}
+            submitting={submitting}
+            error={otpError}
+            onConfirm={(code) => void confirmTransfer(code)}
+            onClose={() => setOtpOpen(false)}
+        />
+    )
+
+    if (result?.kind === 'success') {
+        return (
+            <>
+                <PageHeader title="Send money" />
+                <TransferSuccess transfer={result.transfer} replayed={result.replayed} onSendAnother={() => setResult(null)} />
+            </>
+        )
+    }
+
+    if (result?.kind === 'failure') {
+        return (
+            <>
+                <PageHeader title="Send money" />
+                <TransferFailure
+                    problem={result.problem}
+                    attempted={result.attempted}
+                    uncertain={result.uncertain}
+                    // Same transfer, same key: the code again, then the same request. It can't be sent twice.
+                    onRetry={() => {
+                        setOtpError(null)
+                        setOtpOpen(true)
+                    }}
+                    // Back to the form with the values kept; changing them makes it a new transfer (new key).
+                    onEdit={() => setResult(null)}
+                />
+                {otpDialog}
+            </>
+        )
+    }
 
     return (
         <>
@@ -157,14 +203,6 @@ export function SendMoneyPage() {
 
                 <Grid.Col span={{ base: 12, md: 5 }}>
                 <Stack gap="lg">
-                    {sent && (
-                        <Alert role="status" color="teal" variant="light" radius="lg" icon={<IconCircleCheck size={22} stroke={1.75} />}
-                            title={`Sent ${formatMoney(sent.transfer.amount, sent.transfer.currency)} to ${sent.transfer.toUsername}.`}>
-                            <Text size="sm">New balance: {formatMoney(sent.transfer.newBalance, sent.transfer.currency)}</Text>
-                            {sent.replayed && <Text size="sm" c="dimmed">This transfer was already done, so nothing was sent twice.</Text>}
-                            <Anchor component={Link} to="/history" size="sm" fw={500}>View history</Anchor>
-                        </Alert>
-                    )}
                     <Card className="preview-card">
                         <Text fw={600} mb="sm">Summary</Text>
                         <Group justify="space-between">
@@ -194,16 +232,7 @@ export function SendMoneyPage() {
                 </Grid.Col>
             </Grid>
 
-            <OtpModal
-                opened={otpOpen}
-                title="Confirm with your code"
-                description={pending ? `Enter the 6-digit code to send ${formatMoney(pending.amount)} to ${pending.toUsername}.` : ''}
-                confirmLabel={submitting ? 'Sending…' : 'Confirm and send'}
-                submitting={submitting}
-                error={otpError}
-                onConfirm={(code) => void confirmTransfer(code)}
-                onClose={() => setOtpOpen(false)}
-            />
+            {otpDialog}
         </>
     )
 }
