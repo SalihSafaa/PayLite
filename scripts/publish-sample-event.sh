@@ -22,9 +22,11 @@ usage() {
 
 # Runs a query against WalletDb as sa and prints the raw result (no headers, no row count).
 # The password is read inside the container, so it doesn't need to be exported in your shell.
+# -I: QUOTED_IDENTIFIER ON, which SQL Server requires to UPDATE a table with a filtered index (the outbox has one).
+# -b: exit with an error if the query fails, so the script stops instead of printing the error as data.
 sql() {
   docker compose exec -T -e QUERY="SET NOCOUNT ON; $1" sqlserver bash -c \
-    '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -d WalletDb -h -1 -W -Q "$QUERY"'
+    '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -I -b -d WalletDb -h -1 -W -Q "$QUERY"'
 }
 
 # Produces one message. $1 = headers ("name:value,name:value"), $2 = key, $3 = value (one line).

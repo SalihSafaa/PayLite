@@ -1,50 +1,45 @@
-# Brief checklist before Demo Day: reviews, ADRs, live demo
+# Brief checklist before Demo Day: reviews, ADRs, drill 5
 
 Status: Open
 From: Salih (A) · To: Aboalhassan (B)
 
-I went through the brief again against what's on `main`. Three things count towards our grades that
-we haven't done yet, plus the script you asked for.
+Thanks for #16–#19. I merged all of them with `main` and my #20 locally and tested them: all tests pass
+(41 Wallet + 37 Activity + 33 frontend), and in a fresh `docker compose up` the happy path works (the
+merchant's bell shows the payment about 1 second after the transfer, without a refresh, and the summary
+updates live) and scenario 7 lands on the DLT with every `dlt-*` header. Details are in my reviews on your PRs.
 
-## 1. Real review comments (both of us)
+Three things left from the brief:
 
-The brief: "A review means reading the code and leaving real comments. Clicking Approve isn't a
-review", and our reviews are part of the individual grade. All approvals so far (mine and yours) are
-"no comment". From now on let's each leave real comments (questions, bugs, suggestions) on every PR
-before approving. I'm adding mine to #10 now; it would help both of us if you did the same on
-#11–#15.
+## 1. Drill 5 command in the runbook fails (#19)
 
-## 2. ADRs: Proposed → Accepted
+`sqlcmd ... -Q "UPDATE WalletDb.wallet.OutboxMessages SET SentAt = NULL ..."` fails with
+`Msg 1934 ... incorrect settings: 'QUOTED_IDENTIFIER'` (and exits 0). sqlcmd runs with QUOTED_IDENTIFIER OFF,
+and SQL Server refuses an UPDATE on a table with a filtered index (`IX_OutboxMessages_Unsent`). Adding `-I`
+fixes it; I tested it. Scenario 5 is one of the three the brief requires live.
 
-ADR-0001, 0003 and 0004 still say `Status: Proposed`. We follow all of them, and the team grade looks
-at "contracts and ADRs: clear, agreed, and actually followed". The ADRs are yours: can you set them to
-`Accepted` in your next PR? (ADR-0001's follow-up, top-up minimum 1 and whole dinars, is done.)
+`scripts/publish-sample-event.sh replay` (in #20) does the same UPDATE with `-I -b`, so the runbook could
+also just call that.
 
-## 3. The live demo, per the brief's agenda
+## 2. Real review comments (both of us)
 
-- **Happy path (10 min):** "the notification appears live and the merchant summary updates". That needs
-  the SignalR hub, the bell and the daily summary endpoint and page. Will they be ready by Tuesday?
-  If not, what do we show instead (e.g. the notifications list after a refresh)?
-- **Failure demo (15 min), at least 1, 4 and 5:** I'll do 1 (double-click) and 4 (stop Kafka). For 5
-  you can now use the script below.
-- **One design decision each, with its trade-off (5 min each):** mine is lock ordering in
-  `usp_Transfer`. Which one is yours?
+The brief: "A review means reading the code and leaving real comments. Clicking Approve isn't a review",
+and reviews are part of the individual grade. All approvals so far (mine and yours) are "no comment".
+I'm leaving real comments on #16–#19 today; it would help both of us if you did the same on my PRs
+(#20 now, and #11–#15 if you have time).
 
-## 4. The sample-event script you asked for (in my PR)
+## 3. ADRs: Proposed → Accepted
 
-`scripts/publish-sample-event.sh`, tested in compose:
+ADR-0001, 0003 and 0004 still say `Status: Proposed` on `main` and on all your branches. We follow all of
+them, and the team grade looks at "contracts and ADRs: clear, agreed, and actually followed". Can you set
+them to `Accepted` in #19?
+
+## The script you asked for (#20)
 
 ```bash
-scripts/publish-sample-event.sh replay        # scenario 5: re-sends the newest real event from the outbox
-scripts/publish-sample-event.sh poison        # scenario 7: puts invalid JSON on the topic
-scripts/publish-sample-event.sh sample 3 3 1234 merchant   # a new valid event (toUserId toWalletId amount)
+scripts/publish-sample-event.sh replay                     # scenario 5: the outbox publishes the newest sent event again
+scripts/publish-sample-event.sh poison                     # scenario 7: invalid JSON on the topic
+scripts/publish-sample-event.sh sample 3 3 1234 merchant   # a new valid event (toUserId toWalletId amount), no money moves
 ```
 
-What I saw: `replay` → your service logs "already processed, skipping" and the counts don't change ✅.
-`sample` → a notification and a summary row, no money moves ✅. `poison` → logged and skipped; the DLT
-part is your `feat/activity-dead-letter` work.
-
-One thing for the scenario 5 demo: on a duplicate, EF Core also logs
-`[ERR] An exception occurred in the database while saving changes ...` before your "already processed"
-line. It's the expected path, but on screen it looks like a failure. Maybe insert into
-`ProcessedEvents` first with plain SQL and catch 2627 there, or lower EF's `SaveChangesFailed` log level.
+`replay` uses your drill 5 approach (clear `SentAt`, the real publisher re-sends it), so it behaves exactly
+like the publisher crash in ADR-0004.
