@@ -1,3 +1,4 @@
+import { Anchor, Badge, Button, Card, Group, Loader, Stack, Text, Title } from '@mantine/core'
 import { Link } from 'react-router'
 import { ProblemDetailsAlert } from '../../shared/components/ProblemDetailsAlert'
 import { formatMoney } from '../../shared/lib/money'
@@ -9,26 +10,35 @@ import { useTransferHistory } from './useTransferHistory'
 function RecentTransactions() {
     const { data, loading, problem, reload } = useTransferHistory(1, 5)
 
-    if (loading) return <p className="muted">Loading transactions…</p>
+    if (loading) {
+        return (
+            <Group gap="xs">
+                <Loader size="xs" />
+                <Text c="dimmed" size="sm">Loading transactions…</Text>
+            </Group>
+        )
+    }
     if (problem) {
         return (
-            <>
+            <Stack align="start">
                 <ProblemDetailsAlert problem={problem} />
-                <button type="button" onClick={reload}>Try again</button>
-            </>
+                <Button variant="default" onClick={reload}>Try again</Button>
+            </Stack>
         )
     }
     if (!data || data.totalCount === 0) {
         return (
-            <p className="muted">
-                No transactions yet. <Link to="/send">Send money</Link>
-            </p>
+            <Text c="dimmed">
+                No transactions yet. <Anchor component={Link} to="/send">Send money</Anchor>
+            </Text>
         )
     }
     return (
         <>
             <TransferTable items={data.items} />
-            {data.totalCount > data.items.length && <Link to="/history">See all {data.totalCount} transactions</Link>}
+            {data.totalCount > data.items.length && (
+                <Anchor component={Link} to="/history" size="sm">See all {data.totalCount} transactions</Anchor>
+            )}
         </>
     )
 }
@@ -36,32 +46,46 @@ function RecentTransactions() {
 export function WalletDashboardPage() {
     const { wallet, setWallet, loading, problem, reload } = useMyWallet()
 
-    if (loading && !wallet) return <p className="muted">Loading your wallet…</p>
+    if (loading && !wallet) {
+        return (
+            <Group gap="xs">
+                <Loader size="sm" />
+                <Text c="dimmed">Loading your wallet…</Text>
+            </Group>
+        )
+    }
 
     if (problem && !wallet) {
         return (
-            <section>
+            <Stack align="start">
                 <ProblemDetailsAlert problem={problem} />
-                <button type="button" onClick={reload}>Try again</button>
-            </section>
+                <Button variant="default" onClick={reload}>Try again</Button>
+            </Stack>
         )
     }
 
     if (!wallet) return null
 
     return (
-        <section>
-            <h1>Wallet</h1>
-            <div className="card">
-                <span className="muted">Balance</span>
-                {wallet.isMerchant && <span className="badge">Merchant</span>}
-                <p className="balance">{formatMoney(wallet.balance, wallet.currency)}</p>
-                <TopUpForm onToppedUp={setWallet} />
-            </div>
-            <div className="card">
-                <h2>Recent transactions</h2>
+        <Stack>
+            <Title order={2}>Wallet</Title>
+            <Card withBorder radius="md" p="lg">
+                <Group justify="space-between" align="start">
+                    <div>
+                        <Text c="dimmed" size="sm">Balance</Text>
+                        <Text fz={36} fw={700} lh={1.2}>{formatMoney(wallet.balance, wallet.currency)}</Text>
+                    </div>
+                    {wallet.isMerchant && <Badge size="lg" variant="light">Merchant</Badge>}
+                </Group>
+                <Group mt="md" align="end" justify="space-between">
+                    <TopUpForm onToppedUp={setWallet} />
+                    <Button component={Link} to="/send">Send money</Button>
+                </Group>
+            </Card>
+            <Card withBorder radius="md" p="lg">
+                <Title order={4} mb="sm">Recent transactions</Title>
                 <RecentTransactions />
-            </div>
-        </section>
+            </Card>
+        </Stack>
     )
 }

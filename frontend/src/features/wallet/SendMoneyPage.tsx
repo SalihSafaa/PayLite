@@ -1,3 +1,4 @@
+import { Alert, Anchor, Button, Card, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { walletApi } from '../../shared/api/clients'
@@ -80,32 +81,25 @@ export function SendMoneyPage() {
     }
 
     return (
-        <section>
-            <h1>Send money</h1>
-            <div className="card">
-                <form onSubmit={handleSubmit} noValidate className="stack">
-                    <label>
-                        Recipient username
-                        <input value={toUsername} onChange={(e) => handleChange(setToUsername, e.target.value)} autoComplete="off" placeholder="bob" />
-                    </label>
-                    <label>
-                        Amount (IQD)
-                        <input inputMode="numeric" value={amount} onChange={(e) => handleChange(setAmount, e.target.value)} placeholder="25000" />
-                    </label>
-                    <div>
-                        <button type="submit" disabled={submitting}>{submitting ? 'Sending…' : 'Send'}</button>
-                    </div>
+        <Stack maw={480}>
+            <Title order={2}>Send money</Title>
+            <Card withBorder radius="md" p="lg">
+                <form onSubmit={handleSubmit} noValidate>
+                    <Stack>
+                        <TextInput label="Recipient username" value={toUsername} onChange={(e) => handleChange(setToUsername, e.currentTarget.value)} autoComplete="off" placeholder="bob" />
+                        <TextInput label="Amount (IQD)" description="Whole dinars, up to 10,000,000" inputMode="numeric" value={amount} onChange={(e) => handleChange(setAmount, e.currentTarget.value)} placeholder="25000" />
+                        <ProblemDetailsAlert problem={problem} />
+                        <Button type="submit" disabled={submitting} loading={submitting}>{submitting ? 'Sending…' : 'Send'}</Button>
+                    </Stack>
                 </form>
-                <ProblemDetailsAlert problem={problem} />
-                {sent && (
-                    <div role="status" className="success">
-                        <strong>Sent {formatMoney(sent.transfer.amount, sent.transfer.currency)} to {sent.transfer.toUsername}.</strong>
-                        <p>New balance: {formatMoney(sent.transfer.newBalance, sent.transfer.currency)}</p>
-                        {sent.replayed && <p className="muted">This transfer was already done, so nothing was sent twice.</p>}
-                        <Link to="/history">View history</Link>
-                    </div>
-                )}
-            </div>
-        </section>
+            </Card>
+            {sent && (
+                <Alert role="status" color="teal" variant="light" title={`Sent ${formatMoney(sent.transfer.amount, sent.transfer.currency)} to ${sent.transfer.toUsername}.`}>
+                    <Text size="sm">New balance: {formatMoney(sent.transfer.newBalance, sent.transfer.currency)}</Text>
+                    {sent.replayed && <Text size="sm" c="dimmed">This transfer was already done, so nothing was sent twice.</Text>}
+                    <Anchor component={Link} to="/history" size="sm">View history</Anchor>
+                </Alert>
+            )}
+        </Stack>
     )
 }

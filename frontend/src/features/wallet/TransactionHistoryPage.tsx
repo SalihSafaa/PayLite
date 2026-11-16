@@ -1,3 +1,4 @@
+import { Anchor, Button, Card, Group, Loader, Stack, Text, Title } from '@mantine/core'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { ProblemDetailsAlert } from '../../shared/components/ProblemDetailsAlert'
@@ -19,41 +20,46 @@ export function TransactionHistoryPage() {
     }
 
     return (
-        <section>
-            <h1>Transaction history</h1>
-            <div className="card">
-                {loading && <p className="muted">Loading transactions…</p>}
+        <Stack>
+            <Title order={2}>Transaction history</Title>
+            <Card withBorder radius="md" p="lg">
+                {loading && (
+                    <Group gap="xs">
+                        <Loader size="xs" />
+                        <Text c="dimmed" size="sm">Loading transactions…</Text>
+                    </Group>
+                )}
 
                 {!loading && problem && (
-                    <>
+                    <Stack align="start">
                         <ProblemDetailsAlert problem={problem} />
-                        <button type="button" onClick={reload}>Try again</button>
-                    </>
+                        <Button variant="default" onClick={reload}>Try again</Button>
+                    </Stack>
                 )}
 
                 {!loading && !problem && data && data.totalCount === 0 && (
-                    <p className="muted">
-                        No transactions yet. <Link to="/send">Send money</Link> to get started.
-                    </p>
+                    <Text c="dimmed">
+                        No transactions yet. <Anchor component={Link} to="/send">Send money</Anchor> to get started.
+                    </Text>
                 )}
 
                 {!loading && !problem && data && data.totalCount > 0 && (
-                    <>
+                    <Stack>
                         <TransferTable items={data.items} />
-                        <div className="pager">
-                            <button type="button" onClick={() => goTo(page - 1)} disabled={page <= 1}>
+                        <Group justify="space-between">
+                            <Button variant="default" onClick={() => goTo(page - 1)} disabled={page <= 1}>
                                 Previous
-                            </button>
-                            <span className="muted">
+                            </Button>
+                            <Text size="sm" c="dimmed">
                                 Page {page} of {totalPages} · {data.totalCount} {data.totalCount === 1 ? 'transaction' : 'transactions'}
-                            </span>
-                            <button type="button" onClick={() => goTo(page + 1)} disabled={page >= totalPages}>
+                            </Text>
+                            <Button variant="default" onClick={() => goTo(page + 1)} disabled={page >= totalPages}>
                                 Next
-                            </button>
-                        </div>
-                    </>
+                            </Button>
+                        </Group>
+                    </Stack>
                 )}
-            </div>
-        </section>
+            </Card>
+        </Stack>
     )
 }

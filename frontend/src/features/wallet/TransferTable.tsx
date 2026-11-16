@@ -1,3 +1,4 @@
+import { Badge, Table, Text } from '@mantine/core'
 import { formatMoney } from '../../shared/lib/money'
 import type { TransferHistoryItem } from './useTransferHistory'
 
@@ -6,35 +7,41 @@ const dateFormat = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeS
 /** Shared by the dashboard (last 5) and the history page. */
 export function TransferTable({ items }: { items: TransferHistoryItem[] }) {
     return (
-        <table className="table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>With</th>
-                    <th className="num">Amount</th>
-                    <th className="num">Balance after</th>
-                </tr>
-            </thead>
-            <tbody>
-                {items.map((item) => {
-                    const sent = item.direction === 'Sent'
-                    return (
-                        <tr key={item.transferId}>
-                            <td>{dateFormat.format(new Date(item.createdAt))}</td>
-                            <td>{sent ? 'Sent' : 'Received'}</td>
-                            <td>{item.counterpartyUsername}</td>
-                            <td className={`num ${sent ? 'out' : 'in'}`}>
-                                {sent ? '−' : '+'}
-                                {formatMoney(item.amount, item.currency)}
-                            </td>
-                            <td className="num muted">
-                                {item.balanceAfter != null ? formatMoney(item.balanceAfter, item.currency) : '—'}
-                            </td>
-                        </tr>
-                    )
-                })}
-            </tbody>
-        </table>
+        <Table.ScrollContainer minWidth={620}>
+            <Table verticalSpacing="sm" highlightOnHover>
+                <Table.Thead>
+                    <Table.Tr>
+                        <Table.Th>Date</Table.Th>
+                        <Table.Th>Type</Table.Th>
+                        <Table.Th>With</Table.Th>
+                        <Table.Th ta="right">Amount</Table.Th>
+                        <Table.Th ta="right">Balance after</Table.Th>
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                    {items.map((item) => {
+                        const sent = item.direction === 'Sent'
+                        return (
+                            <Table.Tr key={item.transferId}>
+                                <Table.Td style={{ whiteSpace: 'nowrap' }}>{dateFormat.format(new Date(item.createdAt))}</Table.Td>
+                                <Table.Td style={{ whiteSpace: 'nowrap' }}>
+                                    <Badge variant="light" color={sent ? 'red' : 'teal'} style={{ flexShrink: 0, overflow: 'visible' }}>{sent ? 'Sent' : 'Received'}</Badge>
+                                </Table.Td>
+                                <Table.Td>{item.counterpartyUsername}</Table.Td>
+                                <Table.Td ta="right">
+                                    <Text span fw={600} c={sent ? 'red.7' : 'teal.7'}>
+                                        {sent ? '−' : '+'}
+                                        {formatMoney(item.amount, item.currency)}
+                                    </Text>
+                                </Table.Td>
+                                <Table.Td ta="right" c="dimmed">
+                                    {item.balanceAfter != null ? formatMoney(item.balanceAfter, item.currency) : '—'}
+                                </Table.Td>
+                            </Table.Tr>
+                        )
+                    })}
+                </Table.Tbody>
+            </Table>
+        </Table.ScrollContainer>
     )
 }
