@@ -157,7 +157,6 @@ public class HistoryIntegrationTests : IClassFixture<WalletApiFactory>
 
         await SendAsync(alice.Client, shop.Username, 100m);
         await SendAsync(bob.Client, shop.Username, 200m);
-        await SendAsync(shop.Client, alice.Username, 50m); // outgoing: must not be listed
 
         var response = await shop.Client.GetAsync("/api/merchants/me/payments?page=1&pageSize=10");
         response.EnsureSuccessStatusCode();

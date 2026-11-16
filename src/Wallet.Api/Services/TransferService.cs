@@ -34,6 +34,17 @@ public class TransferService : ITransferService
             return Result<TransferOutcome>.Failure(ErrorType.Validation,
                 $"A single transfer cannot exceed {_options.MaxTransferAmount:N0} {WalletDefaults.Currency}.");
 
+        // Merchant accounts only receive payments. Checked on the role in the database, not the one in the
+        // JWT, so it holds even for a token issued before a role change. Nothing is stored for a refused
+        // request (no idempotency key, no transfer), so this is safe to check before the procedure.
+        var senderRole = await _context.Users.AsNoTracking()
+            .Where(u => u.Id == fromUserId)
+            .Select(u => u.Role)
+            .SingleOrDefaultAsync();
+        if (senderRole == Roles.Merchant)
+            return Result<TransferOutcome>.Failure(ErrorType.Forbidden,
+                "Merchant accounts can only receive payments, not send money.");
+
         var transferId = new SqlParameter("@TransferId", SqlDbType.BigInt) { Direction = ParameterDirection.Output };
         var newBalance = new SqlParameter("@NewBalance", SqlDbType.Decimal) { Direction = ParameterDirection.Output, Precision = 18, Scale = 2 };
         var replayed = new SqlParameter("@Replayed", SqlDbType.Bit) { Direction = ParameterDirection.Output };
