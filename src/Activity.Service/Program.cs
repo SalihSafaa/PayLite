@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using PayLite.ActivityService;
@@ -70,7 +71,14 @@ if (builder.Configuration.GetValue($"{KafkaOptions.SectionName}:ConsumerEnabled"
 // TODO (Owner B): notification + summary endpoints, SignalR hub
 builder.Services.AddControllers();
 builder.Services.AddDbContext<ActivityDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("ActivityDb")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("ActivityDb"))
+        // A duplicate event is EXPECTED to fail with 2627 (that's how the consumer stays idempotent), and
+        // the processor logs "already processed, skipping" for it. Without this, EF Core also logs the
+        // failed save and the failed command as [ERR], which reads like a crash during the scenario 5 demo.
+        // Real failures are still logged by our own code (retries, dead-letter, the API exception handler).
+        .ConfigureWarnings(warnings => warnings.Log(
+            (CoreEventId.SaveChangesFailed, LogLevel.Debug),
+            (RelationalEventId.CommandError, LogLevel.Debug))));
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ActivityDbContext>("sqlserver")
