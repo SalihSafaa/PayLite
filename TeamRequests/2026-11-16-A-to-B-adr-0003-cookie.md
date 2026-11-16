@@ -1,6 +1,6 @@
 # ADR-0003: the refresh-token cookie is in
 
-Status: Answered
+Status: Done
 From: Salih (A) · To: Aboalhassan (B)
 
 I built ADR-0003's stretch goal in my PR: the refresh token is now an `HttpOnly; Secure; SameSite=Strict;
@@ -32,4 +32,7 @@ keep it for the tests and non-browser clients, or leave it out when the cookie i
 
 Checked on my side: the SignalR connection reads the token through `accessTokenFactory` on every (re)connect, so it
 picks up the refreshed access token automatically, and the bell only starts once the session is restored.
+
+**Follow-up (2026-11-16):** Salih answered the question in his review of #26 ("let's drop it from the body") and
+fixed it in #27: login and refresh now return only the access token. ADR-0003's Consequences say so. Done.
 

@@ -1,7 +1,7 @@
 # ADR-0003: Where the frontend stores tokens
 
 - **Status:** Accepted
-- **Date:** 2026-11-12 (updated 2026-11-16: refresh token in an httpOnly cookie, #24)
+- **Date:** 2026-11-12 (updated 2026-11-16: refresh token in an httpOnly cookie only, #24 and #27)
 - **Deciders:** Owner A, Owner B
 
 ## Context
@@ -34,7 +34,7 @@ How the frontend uses it (`frontend/src/shared/auth/session.ts`, `AuthProvider.t
 - An XSS bug can still *use* the access token while the page is open, but it can't steal a long-lived credential: the access token expires within 15 minutes and the refresh token is out of JavaScript's reach. Memory + httpOnly limits the damage; it does not replace preventing XSS. React escaping, no `dangerouslySetInnerHTML`, and a strict CSP from nginx are still required.
 - A page refresh keeps you logged in, and an active session lasts up to the refresh token's 7 days instead of 15 minutes. The cost is one extra request on start-up and a short "restoring session" moment before protected pages render.
 - Stealing the cookie still needs the browser itself (same origin, same device); a replayed old cookie is caught by reuse detection, which logs that user out everywhere.
-- The login and refresh responses still include `refreshToken` in the JSON body, for non-browser clients and the integration tests. The frontend ignores it, but a script running during login could read it. If we want the browser path to be cookie-only, the next step is to leave it out of the body when the cookie is set.
+- The refresh token exists **only** in the cookie: since #27, `/api/auth/login` and `/api/auth/refresh` return just `{ "accessToken": "..." }`, so not even a script running during login can read it.
 - No token plumbing in components: one store (`tokenStore`) for the access token, one place (`session.ts`) for refresh and logout.
 - The Activity Service is unchanged: it only ever sees the access token (header for REST, `?access_token=` on the hub path only), with the same claims.
 - The hub-only query-string rule is covered by a test in the Activity Service: `NotificationsApiTests.TokenInQueryString_IsRejectedOutsideTheHub` (`?access_token=` on `/api/notifications` returns 401).
