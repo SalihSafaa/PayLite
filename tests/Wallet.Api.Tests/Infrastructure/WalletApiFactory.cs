@@ -91,4 +91,17 @@ public class WalletApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Short back-off so the Kafka-down test doesn't wait 30s after the broker returns.
         builder.UseSetting("Outbox:MaxBackoffSeconds", "2");
     }
+
+    /// <summary>The demo one-time code (Otp:DemoCode default).</summary>
+    public const string Otp = "123456";
+
+    /// <summary>
+    /// Every test client sends the right one-time code by default, so the transfer tests keep testing transfers.
+    /// OtpIntegrationTests removes or changes the header to test the OTP rules themselves.
+    /// </summary>
+    protected override void ConfigureClient(HttpClient client)
+    {
+        base.ConfigureClient(client);
+        client.DefaultRequestHeaders.Add("X-OTP-Code", Otp);
+    }
 }

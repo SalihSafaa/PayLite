@@ -36,6 +36,9 @@ builder.Services.AddOptions<JwtOptions>()
 builder.Services.AddOptions<PasswordHashOptions>()
     .Bind(builder.Configuration.GetSection(PasswordHashOptions.SectionName));
 
+builder.Services.AddOptions<OtpOptions>()
+    .Bind(builder.Configuration.GetSection(OtpOptions.SectionName));
+
 builder.Services.AddOptions<WalletOptions>()
     .Bind(builder.Configuration.GetSection(WalletOptions.SectionName));
 
@@ -72,6 +75,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<ITransferService, TransferService>();
+builder.Services.AddSingleton<IOtpVerifier, OtpVerifier>();
 builder.Services.AddHostedService<IdempotencyKeyCleanupService>();
 builder.Services.AddHostedService<OutboxPublisher>();
 // TODO (Owner A): outbox publisher (BackgroundService)

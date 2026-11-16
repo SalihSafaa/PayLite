@@ -84,7 +84,7 @@ browser window (or a private window) with **Notifications** or **Daily summary**
 
 ### Drill 1: the same transfer twice
 
-Double-click **Send** on the Send money page. One transfer, one notification. Sending the same request
+On the Send money page, press **Send**, type the one-time code (demo: **123456**) and double-click **Confirm and send**. One transfer, one notification. Sending the same request
 again with the same `Idempotency-Key` returns `201` with `Idempotent-Replayed: true` and no new event.
 
 ### Drill 4: Kafka down during a transfer

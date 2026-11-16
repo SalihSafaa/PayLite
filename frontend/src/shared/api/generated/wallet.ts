@@ -294,6 +294,7 @@ export interface paths {
                 query?: never;
                 header?: {
                     "Idempotency-Key"?: string;
+                    "X-OTP-Code"?: string;
                 };
                 path?: never;
                 cookie?: never;
@@ -417,6 +418,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/wallets/me/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "X-OTP-Code"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CardDetailsDto"];
+                        "application/json": components["schemas"]["CardDetailsDto"];
+                        "text/json": components["schemas"]["CardDetailsDto"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/wallets/me/top-ups": {
         parameters: {
             query?: never;
@@ -466,6 +517,12 @@ export interface components {
     schemas: {
         AccessTokenResponseDto: {
             accessToken: string;
+        };
+        CardDetailsDto: {
+            holderName: string;
+            number: string;
+            expiry: string;
+            cvv: string;
         };
         CreateTransferDto: {
             toUsername: string;
@@ -574,6 +631,7 @@ export interface components {
             balance: number;
             currency: string;
             isMerchant: boolean;
+            cardLast4: string;
         };
     };
     responses: never;

@@ -10,10 +10,12 @@ namespace PayLite.WalletApi;
 public class TransfersController : ControllerBase
 {
     private readonly ITransferService _transferService;
+    private readonly IOtpVerifier _otp;
 
-    public TransfersController(ITransferService transferService)
+    public TransfersController(ITransferService transferService, IOtpVerifier otp)
     {
         _transferService = transferService;
+        _otp = otp;
     }
 
     /// <summary>The caller's transfers, newest first. <paramref name="direction"/>: All (default), Sent or Received.</summary>
@@ -38,8 +40,14 @@ public class TransfersController : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<TransferResultDto>> CreateTransfer(
         CreateTransferDto request,
-        [FromHeader(Name = CorrelationHeaders.IdempotencyKey)] string? idempotencyKey)
+        [FromHeader(Name = CorrelationHeaders.IdempotencyKey)] string? idempotencyKey,
+        [FromHeader(Name = OtpOptions.HeaderName)] string? otp)
     {
+        // Checked BEFORE the idempotency step: a missing or wrong code stores no key and moves nothing,
+        // so the client can retry the same transfer (same Idempotency-Key) with the right code (ADR-0002).
+        if (_otp.Check(otp) is { } otpProblem)
+            return StatusCode(StatusCodes.Status403Forbidden, otpProblem);
+
         if (!Guid.TryParse(idempotencyKey, out var key))
             return this.ToActionResult(Result<TransferOutcome>.Failure(
                 ErrorType.Validation, "A valid Idempotency-Key UUID header is required."));
