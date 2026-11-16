@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
@@ -233,9 +234,9 @@ public class TopUpIntegrationTests : IClassFixture<WalletApiFactory>
         var tokens = await login.Content.ReadFromJsonAsync<LoginResponseDto>();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens!.AccessToken);
 
-        // The user id is in the token's "nameid" claim (JwtSecurityTokenHandler's short name for NameIdentifier).
+        // JwtTokenService writes the full ClaimTypes.NameIdentifier URI, and ReadJwtToken doesn't shorten it.
         var userId = int.Parse(new JwtSecurityTokenHandler().ReadJwtToken(tokens.AccessToken)
-            .Claims.First(c => c.Type == "nameid").Value);
+            .Claims.First(c => c.Type == ClaimTypes.NameIdentifier).Value);
         return new TestUser(username, client, userId);
     }
 
