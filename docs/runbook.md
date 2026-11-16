@@ -68,11 +68,11 @@ docker compose exec kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-se
 
 ```bash
 # Wallet: outbox rows (SentAt is NULL while Kafka is down)
-docker compose exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C \
+docker compose exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -I -b \
   -Q "SELECT Id, CorrelationId, SentAt, Attempts, LastError FROM WalletDb.wallet.OutboxMessages"'
 
 # Activity: notifications and the merchant summary
-docker compose exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C \
+docker compose exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -I -b \
   -Q "SELECT UserId, Amount, FromUsername, OccurredAt, ReadAt FROM ActivityDb.activity.Notifications ORDER BY Id;
       SELECT MerchantUserId, [Date], [Hour], PaymentCount, TotalAmount FROM ActivityDb.activity.MerchantHourlySummaries"'
 ```
@@ -108,17 +108,18 @@ window within a second of that.
 ### Drill 5: the same event twice
 
 Covered by the tests (`ConsumerIntegrationTests.SameEventTwice_OneNotificationAndNoDoubleCount`). In compose,
-make the Wallet API's outbox publish the last event **again**, exactly like a publisher crash between
+make the Wallet API's outbox publish the newest sent event **again**, exactly like a publisher crash between
 Kafka's acknowledgement and setting `SentAt` (ADR-0004). Same `eventId`, key and headers:
 
 ```bash
-docker compose exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C \
-  -Q "UPDATE WalletDb.wallet.OutboxMessages SET SentAt = NULL WHERE Id = (SELECT MAX(Id) FROM WalletDb.wallet.OutboxMessages)"'
+scripts/publish-sample-event.sh replay
 docker compose logs -f wallet-api activity-service   # "Published event <id>" again, then "already processed, skipping"
 ```
 
-The Activity Service logs `Event <id> was already processed, skipping`. The notification count, the bell
-and the merchant summary don't change.
+The script clears `SentAt` on the newest sent outbox row (`sqlcmd -I -b`; without `-I`, SQL Server refuses the
+UPDATE because `IX_OutboxMessages_Unsent` is a filtered index). The Activity Service logs
+`Event <id> was already processed, skipping`. The notification count, the bell and the merchant summary don't
+change.
 
 ### Drill 6: Activity Service down during transfers
 
@@ -137,8 +138,7 @@ of the transfers, and the lag is back to 0.
 ### Drill 7: poison message
 
 ```bash
-echo 'this is not json' | docker compose exec -T kafka /opt/kafka/bin/kafka-console-producer.sh \
-  --bootstrap-server localhost:9092 --topic paylite.transfers
+scripts/publish-sample-event.sh poison
 docker compose logs activity-service | grep "dead-letter\|paylite.transfers.dlt"
 docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 \
   --topic paylite.transfers.dlt --from-beginning --property print.headers=true --timeout-ms 5000
@@ -152,6 +152,26 @@ it is processed normally, so the consumer kept going.
 A transient error (e.g. `docker compose stop sqlserver` for a few seconds) is retried 3 times (1 s, 2 s, 4 s)
 before the message is dead-lettered with `dlt-reason:retries-exhausted`.
 
+## Replaying the dead-letter topic
+
+A message that failed only for a transient reason (`dlt-reason: retries-exhausted`, e.g. `ActivityDb` was down
+for longer than the ~7 s of retries) can be put back on `paylite.transfers` once the cause is fixed. Processing
+is idempotent, so replaying something that was already processed does nothing.
+
+```bash
+# 1. look at what's there, and why
+docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+  --topic paylite.transfers.dlt --from-beginning --property print.headers=true --timeout-ms 5000
+# 2. copy every dead-lettered value back to the main topic
+docker compose exec kafka bash -c '/opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+  --topic paylite.transfers.dlt --from-beginning --timeout-ms 5000 \
+  | /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic paylite.transfers'
+```
+
+Poison messages (`dlt-reason: poison`) will just go back to the DLT; fix the producer instead. The console
+tools copy only the value (no key or headers), which is enough for the consumer: the `eventId` and the
+`correlationId` are in the envelope.
+
 ## Rebuilding the Activity read model
 
 `ActivityDb` is built only from events, and `paylite.transfers` keeps them forever (ADR-0004), so it can be
@@ -159,7 +179,7 @@ rebuilt from scratch:
 
 ```bash
 docker compose stop activity-service
-docker compose exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C \
+docker compose exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -I -b \
   -Q "DELETE FROM ActivityDb.activity.ProcessedEvents; DELETE FROM ActivityDb.activity.Notifications; DELETE FROM ActivityDb.activity.MerchantHourlySummaries"'
 docker compose exec kafka /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 \
   --group activity-service --topic paylite.transfers --reset-offsets --to-earliest --execute

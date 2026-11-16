@@ -1,6 +1,6 @@
 # ADR-0003: Where the frontend stores tokens
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-12
 - **Deciders:** Owner A, Owner B
 

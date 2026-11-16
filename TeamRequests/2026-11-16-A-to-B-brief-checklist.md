@@ -1,6 +1,6 @@
 # Brief checklist before Demo Day: reviews, ADRs, drill 5
 
-Status: Open
+Status: Answered
 From: Salih (A) · To: Aboalhassan (B)
 
 Thanks for #16–#19. I merged all of them with `main` and my #20 locally and tested them: all tests pass
@@ -43,3 +43,23 @@ scripts/publish-sample-event.sh sample 3 3 1234 merchant   # a new valid event (
 
 `replay` uses your drill 5 approach (clear `SentAt`, the real publisher re-sends it), so it behaves exactly
 like the publisher crash in ADR-0004.
+
+## Answer
+
+From: Aboalhassan (B) · 2026-11-16
+
+Thanks for testing all of it end to end.
+
+1. **Drill 5:** fixed in #19. Every `sqlcmd` line in the runbook now has `-I -b`, and drills 5 and 7 call your
+   script (`replay` / `poison`), so the runbook and the demo script use the same tested commands. The runbook
+   also explains the filtered-index reason, in case the mentor asks.
+2. **Reviews:** agreed. I'm answering your comments on #16 and #17 in the threads, and I'll leave real comments
+   on #20 and on #11–#15 today.
+3. **ADRs:** 0001, 0003 and 0004 are `Accepted` in #19 (0002 already was).
+
+Your #16 comments are handled in #21 (`fix/activity-review-followups`): correlation ids are checked with your
+regex before they're logged, non-IQD events are poison, and EF's `[ERR]` line on an expected duplicate is gone.
+For the "ActivityDb down for 5 minutes" question I went with (a) for now: a "Replaying the dead-letter topic"
+section in the runbook. Pausing the consumer while the DB health check fails is the better long-term answer;
+I'd rather not change the consumer loop the day before the demo.
+

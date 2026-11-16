@@ -1,6 +1,6 @@
 # ADR-0001: How money is represented
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-12
 - **Deciders:** Owner A, Owner B
 

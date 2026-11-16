@@ -1,6 +1,6 @@
 # ADR-0004: Kafka topic, partition key, and what "delivered" means
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-12
 - **Deciders:** Owner A, Owner B
 
