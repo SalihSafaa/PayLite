@@ -9,6 +9,7 @@ import { TransactionHistoryPage } from './TransactionHistoryPage'
 import type { TransferHistoryItem } from './useTransferHistory'
 
 vi.mock('../../shared/api/clients', () => ({ walletApi: { GET: vi.fn() } }))
+vi.mock('../../shared/auth/useAuth', () => ({ useAuth: () => ({ user: { username: 'ali', role: 'User' } }) }))
 const get = vi.mocked(walletApi.GET)
 
 type GetResult = Awaited<ReturnType<typeof walletApi.GET>>

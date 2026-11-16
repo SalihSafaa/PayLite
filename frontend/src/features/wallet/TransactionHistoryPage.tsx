@@ -2,6 +2,7 @@ import { Anchor, Card, SegmentedControl } from '@mantine/core'
 import { IconArrowsExchange } from '@tabler/icons-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { useAuth } from '../../shared/auth/useAuth'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { Pager } from '../../shared/components/Pager'
 import { EmptyState, ErrorState, LoadingState } from '../../shared/components/States'
@@ -11,6 +12,8 @@ import { useTransferHistory, type TransferDirectionFilter } from './useTransferH
 const PAGE_SIZE = 10
 
 export function TransactionHistoryPage() {
+    const { user } = useAuth()
+    const isMerchant = user?.role === 'Merchant'
     const [page, setPage] = useState(1)
     const [direction, setDirection] = useState<TransferDirectionFilter>('All')
     const { data, loading, problem, reload } = useTransferHistory(page, PAGE_SIZE, direction)
@@ -61,7 +64,11 @@ export function TransactionHistoryPage() {
 
                 {!loading && !problem && data && data.totalCount === 0 && !emptyText && (
                     <EmptyState icon={<IconArrowsExchange size={24} stroke={1.75} />} title="Your history is empty">
-                        No transactions yet. <Anchor component={Link} to="/send">Send money</Anchor> to get started.
+                        {isMerchant ? (
+                            'No transactions yet. Payments from your customers show up here.'
+                        ) : (
+                            <>No transactions yet. <Anchor component={Link} to="/send">Send money</Anchor> to get started.</>
+                        )}
                     </EmptyState>
                 )}
 
