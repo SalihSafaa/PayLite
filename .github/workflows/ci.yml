@@ -50,6 +50,8 @@ jobs:
 
       - run: npm ci
       - run: npm run lint
+      # Component tests (Vitest + Testing Library, jsdom): no backend needed.
+      - run: npm test
       - run: npm run build
 
   compose:
