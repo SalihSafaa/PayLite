@@ -14,6 +14,8 @@ in [`runbook.md`](runbook.md).
    - consumer lag (`kafka-consumer-groups.sh --describe --group activity-service`)
 4. Two browser windows: **left** = the customer (normal window), **right** = the merchant (private window).
 5. Register `ali` (User) and `coffeeshop` (Merchant) **now**, so the 10-minute happy path doesn't wait for typing.
+6. Know the admin login: `ADMIN_SEED_USERNAME` / `ADMIN_SEED_PASSWORD` from `.env` (default `admin`). Keep a third
+   window (or a second private window) logged in as the admin on **Admin**, to approve top-ups.
 
 ## 1. What PayLite is (5 min, Salih)
 
@@ -26,7 +28,8 @@ in [`runbook.md`](runbook.md).
 
 | Step | Who | Show |
 |---|---|---|
-| Top up `ali` with 100,000 | Salih | Balance updates; `formatMoney` everywhere. |
+| `ali` asks to top up 100,000 | Salih | "Top-up requested": it shows as **Pending** under Top-up requests and the balance doesn't change yet. |
+| The admin approves it | Salih | Admin page → **Approve**. `ali`'s request turns **Approved** and the balance shows 100,000 (`formatMoney` everywhere). |
 | `ali` sends 25,000 to `coffeeshop` | Salih | The **one-time code** dialog (demo code **123456**), then `201`; History shows it; Wallet log line with the correlation id. |
 | Show the card details | Salih | The card shows `•••• 1234`; **Show details** asks for the code, then shows number, expiry and CVV for 30 s. |
 | Right window | Aboalhassan | **The bell goes to 1 without a refresh**; Notifications page shows it; Daily summary shows 1 payment / 25,000 in the current hour; Incoming payments lists it. |
@@ -77,3 +80,4 @@ Expect questions about **each other's** half. Short answers:
 | Why only one refresh at a time? | Every refresh rotates the token. A second request with the old one looks like a stolen token, and reuse detection would log the user out everywhere. |
 | What if `ActivityDb` is wiped? | Reset the consumer group to the earliest offset and replay: the topic keeps events forever, and processing is idempotent and order-independent. |
 | Is the OTP real? | No: it's a demo code (123456, `Otp:DemoCode`). The checks are real: the server refuses a transfer or the card details without it (403, `type: urn:paylite:otp-invalid`), and checks it before the idempotency step so a wrong code stores nothing. A real system would send the code by SMS or an app. |
+| Why can't users top up by themselves? | A top-up is money coming in from outside, so a person (an Admin) approves it. Approving credits the wallet **once**: the credit only happens while the request is still Pending, under a row lock, in the same transaction that marks it Approved, so two admins (or a double-click) can't credit it twice: the second gets 409. An admin can't approve their own request. |

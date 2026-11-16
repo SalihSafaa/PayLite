@@ -1,7 +1,7 @@
-import { Anchor, Card, Group, Modal, SimpleGrid, Text, Title, UnstyledButton } from '@mantine/core'
+import { Alert, Anchor, Card, Group, Modal, SimpleGrid, Text, Title, UnstyledButton } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconArrowsExchange, IconBell, IconChartBar, IconHistory, IconPlus, IconReceipt, IconSend } from '@tabler/icons-react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../../shared/auth/useAuth'
 import { PageHeader } from '../../shared/components/PageHeader'
@@ -9,6 +9,10 @@ import { EmptyState, ErrorState, LoadingState } from '../../shared/components/St
 import { ActivityList } from './ActivityList'
 import { TopUpForm } from './TopUpForm'
 import { useMyWallet } from './useMyWallet'
+import { TopUpRequests } from './TopUpRequests'
+import { useMyTopUps } from './useMyTopUps'
+import type { TopUpRequest } from './topUps'
+import { formatMoney } from '../../shared/lib/money'
 import { useTransferHistory } from './useTransferHistory'
 import { WalletCard } from './WalletCard'
 
@@ -47,8 +51,10 @@ function RecentTransactions({ isMerchant }: { isMerchant: boolean }) {
 
 export function WalletDashboardPage() {
     const { user } = useAuth()
-    const { wallet, setWallet, loading, problem, reload } = useMyWallet()
+    const { wallet, loading, problem, reload } = useMyWallet()
+    const topUps = useMyTopUps()
     const [topUpOpen, topUp] = useDisclosure(false)
+    const [requested, setRequested] = useState<TopUpRequest | null>(null)
 
     if (loading && !wallet) return <LoadingState label="Loading your wallet…" />
     if (problem && !wallet) return <ErrorState problem={problem} onRetry={reload} />
@@ -76,6 +82,20 @@ export function WalletDashboardPage() {
                 </SimpleGrid>
             </SimpleGrid>
 
+            {requested && (
+                <Alert role="status" mt="lg" color="plum" variant="light" radius="lg" withCloseButton onClose={() => setRequested(null)}
+                    title={`Top-up of ${formatMoney(requested.amount, requested.currency)} requested`}>
+                    It's waiting for an admin to approve it. Your balance goes up once it's approved.
+                </Alert>
+            )}
+
+            <Card mt="lg">
+                <Group justify="space-between" mb="xs">
+                    <Title order={2} fz="lg">Top-up requests</Title>
+                </Group>
+                <TopUpRequests data={topUps.data} loading={topUps.loading} problem={topUps.problem} onRetry={topUps.reload} />
+            </Card>
+
             <Card mt="lg">
                 <Group justify="space-between" mb="xs">
                     <Title order={2} fz="lg">Recent activity</Title>
@@ -84,10 +104,11 @@ export function WalletDashboardPage() {
                 <RecentTransactions isMerchant={wallet.isMerchant} />
             </Card>
 
-            <Modal opened={topUpOpen} onClose={topUp.close} title="Top up your wallet" centered radius="lg">
+            <Modal opened={topUpOpen} onClose={topUp.close} title="Request a top-up" centered radius="lg">
                 <TopUpForm
-                    onToppedUp={(updated) => {
-                        setWallet(updated)
+                    onRequested={(request) => {
+                        setRequested(request)
+                        topUps.reload()
                         topUp.close()
                     }}
                 />

@@ -4,7 +4,7 @@ A mini digital wallet, built as a team: users top up, send money to each other o
 and the recipient gets a live notification in the browser. Two .NET services, one event in between,
 a React frontend, all running in containers.
 
-> **Status: feature-complete for Demo Day (2026-11-17).** Wallets, top-ups, idempotent transfers, the
+> **Status: feature-complete for Demo Day (2026-11-17).** Wallets, admin-approved top-ups, idempotent transfers, the
 > transactional outbox, the Kafka consumer with a dead-letter topic, notifications (REST + live SignalR),
 > the merchant daily summary and all frontend pages are in, with all seven failure scenarios tested
 > (see [Failure scenarios](#failure-scenarios)). How to run and debug it: [`docs/runbook.md`](docs/runbook.md).
