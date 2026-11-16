@@ -1,3 +1,4 @@
+import { Button, Group, TextInput } from '@mantine/core'
 import { useState, type FormEvent } from 'react'
 import { walletApi } from '../../shared/api/clients'
 import { toProblemDetails, type ProblemDetails } from '../../shared/api/problemDetails'
@@ -42,13 +43,10 @@ export function TopUpForm({ onToppedUp }: { onToppedUp: (wallet: WalletDto) => v
 
     return (
         <form onSubmit={handleSubmit} noValidate>
-            <div className="inline-form">
-                <label>
-                    Top up (IQD)
-                    <input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50000" />
-                </label>
-                <button type="submit" disabled={submitting}>{submitting ? 'Topping up…' : 'Top up'}</button>
-            </div>
+            <Group align="end" gap="sm" mb="xs">
+                <TextInput label="Top up (IQD)" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.currentTarget.value)} placeholder="50000" w={200} />
+                <Button type="submit" variant="light" loading={submitting}>Top up</Button>
+            </Group>
             <ProblemDetailsAlert problem={problem} />
         </form>
     )

@@ -1,3 +1,4 @@
+import { Anchor, Button, Container, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { walletApi } from '../shared/api/clients'
@@ -40,23 +41,22 @@ export function LoginPage() {
   }
 
   return (
-    <section className="auth-card">
-      <h1>Log in</h1>
-      <form onSubmit={handleSubmit} noValidate>
-        <label>
-          Username
-          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" maxLength={50} />
-        </label>
-        <label>
-          Password
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={100} />
-        </label>
-        <ProblemDetailsAlert problem={problem} />
-        <button type="submit" disabled={submitting}>{submitting ? 'Logging in…' : 'Log in'}</button>
-      </form>
-      <p>
-        No account? <Link to="/register">Register</Link>
-      </p>
-    </section>
+    <Container size={420} py="xl">
+      <Title order={2} ta="center">Welcome back</Title>
+      <Text c="dimmed" size="sm" ta="center" mb="lg">Log in to your PayLite wallet</Text>
+      <Paper withBorder shadow="sm" p="lg" radius="md">
+        <form onSubmit={handleSubmit} noValidate>
+          <Stack>
+            <TextInput label="Username" value={username} onChange={(e) => setUsername(e.currentTarget.value)} autoComplete="username" maxLength={50} />
+            <PasswordInput label="Password" value={password} onChange={(e) => setPassword(e.currentTarget.value)} autoComplete="current-password" maxLength={100} />
+            <ProblemDetailsAlert problem={problem} />
+            <Button type="submit" fullWidth loading={submitting}>Log in</Button>
+          </Stack>
+        </form>
+      </Paper>
+      <Text size="sm" ta="center" mt="md">
+        No account? <Anchor component={Link} to="/register">Register</Anchor>
+      </Text>
+    </Container>
   )
 }

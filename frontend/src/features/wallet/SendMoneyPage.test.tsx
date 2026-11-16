@@ -1,8 +1,10 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { MantineProvider } from '@mantine/core'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { walletApi } from '../../shared/api/clients'
+import { theme } from '../../shared/theme'
 import { SendMoneyPage } from './SendMoneyPage'
 
 // Replace the real API client: these tests check what the page sends, not the server.
@@ -38,9 +40,11 @@ function keyOfCall(n: number): string | undefined {
 
 function renderPage() {
     render(
-        <MemoryRouter>
-            <SendMoneyPage />
-        </MemoryRouter>,
+        <MantineProvider theme={theme}>
+            <MemoryRouter>
+                <SendMoneyPage />
+            </MemoryRouter>
+        </MantineProvider>,
     )
     return userEvent.setup()
 }

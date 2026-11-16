@@ -14,6 +14,7 @@ export default defineConfig({
   // `npm test`: component tests run in a fake browser (jsdom), with no backend.
   test: {
     environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
   },
   server: {
     port: 5173,

@@ -1,8 +1,10 @@
 import { cleanup, render, screen } from '@testing-library/react'
+import { MantineProvider } from '@mantine/core'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { walletApi } from '../../shared/api/clients'
+import { theme } from '../../shared/theme'
 import { TransactionHistoryPage } from './TransactionHistoryPage'
 import type { TransferHistoryItem } from './useTransferHistory'
 
@@ -33,9 +35,11 @@ function page(items: TransferHistoryItem[], totalCount: number, pageNumber = 1):
 
 function renderPage() {
     render(
-        <MemoryRouter>
-            <TransactionHistoryPage />
-        </MemoryRouter>,
+        <MantineProvider theme={theme}>
+            <MemoryRouter>
+                <TransactionHistoryPage />
+            </MemoryRouter>
+        </MantineProvider>,
     )
     return userEvent.setup()
 }

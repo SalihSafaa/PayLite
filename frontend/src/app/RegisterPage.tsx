@@ -1,3 +1,4 @@
+import { Anchor, Button, Container, NativeSelect, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { walletApi } from '../shared/api/clients'
@@ -44,30 +45,31 @@ export function RegisterPage() {
   }
 
   return (
-    <section className="auth-card">
-      <h1>Create an account</h1>
-      <form onSubmit={handleSubmit} noValidate>
-        <label>
-          Username
-          <input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" maxLength={50} />
-        </label>
-        <label>
-          Password
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" maxLength={100} />
-        </label>
-        <label>
-          Account type
-          <select value={accountType} onChange={(e) => setAccountType(e.target.value as 'User' | 'Merchant')}>
-            <option value="User">Personal: send and receive money</option>
-            <option value="Merchant">Merchant: receive payments from customers</option>
-          </select>
-        </label>
-        <ProblemDetailsAlert problem={problem} />
-        <button type="submit" disabled={submitting}>{submitting ? 'Creating…' : 'Register'}</button>
-      </form>
-      <p>
-        Already registered? <Link to="/login">Log in</Link>
-      </p>
-    </section>
+    <Container size={420} py="xl">
+      <Title order={2} ta="center">Create an account</Title>
+      <Text c="dimmed" size="sm" ta="center" mb="lg">A wallet in IQD, ready in a few seconds</Text>
+      <Paper withBorder shadow="sm" p="lg" radius="md">
+        <form onSubmit={handleSubmit} noValidate>
+          <Stack>
+            <TextInput label="Username" value={username} onChange={(e) => setUsername(e.currentTarget.value)} autoComplete="username" maxLength={50} />
+            <PasswordInput label="Password" description="At least 8 characters" value={password} onChange={(e) => setPassword(e.currentTarget.value)} autoComplete="new-password" maxLength={100} />
+            <NativeSelect
+              label="Account type"
+              value={accountType}
+              onChange={(e) => setAccountType(e.currentTarget.value as 'User' | 'Merchant')}
+              data={[
+                { value: 'User', label: 'Personal: send and receive money' },
+                { value: 'Merchant', label: 'Merchant: receive payments from customers' },
+              ]}
+            />
+            <ProblemDetailsAlert problem={problem} />
+            <Button type="submit" fullWidth loading={submitting}>Register</Button>
+          </Stack>
+        </form>
+      </Paper>
+      <Text size="sm" ta="center" mt="md">
+        Already registered? <Anchor component={Link} to="/login">Log in</Anchor>
+      </Text>
+    </Container>
   )
 }

@@ -1,107 +1,53 @@
-/* Minimal neutral styles until the team picks a component library (MUI or Mantine, Day 1). */
-:root {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  color: #1f2328;
-  background: #f6f8fa;
-}
+/* Mantine (src/shared/theme.ts) styles the shell and the Wallet pages. These plain rules are for pages
+   still written in plain HTML. The element rules are wrapped in :where() so they have zero specificity
+   and can never override a Mantine component. Colours follow Mantine's default palette. */
 
-body {
-  margin: 0;
-}
-
-main {
-  max-width: 960px;
+.page {
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 24px 16px;
-}
-
-.topbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: center;
-  padding: 12px 16px;
-  background: #fff;
-  border-bottom: 1px solid #d0d7de;
-}
-
-.topbar nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.topbar nav a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.topbar nav a.active {
-  font-weight: 600;
-  text-decoration: underline;
-}
-
-.topbar-right {
-  margin-left: auto;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.brand {
-  font-size: 1.1rem;
 }
 
 .muted {
-  color: #656d76;
+  color: var(--mantine-color-dimmed);
 }
 
-.auth-card {
-  max-width: 360px;
-  margin: 48px auto;
-  padding: 24px;
-  background: #fff;
-  border: 1px solid #d0d7de;
-  border-radius: 8px;
-}
-
-form {
+:where(form) {
   display: grid;
   gap: 12px;
 }
 
-label {
+:where(label) {
   display: grid;
   gap: 4px;
   font-size: 0.9rem;
 }
 
-input,
-select,
-button {
+:where(input, select, button) {
   font: inherit;
   padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid #d0d7de;
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid var(--mantine-color-gray-4);
 }
 
-button {
+:where(button) {
   cursor: pointer;
-  background: #1f6feb;
+  background: var(--mantine-color-blue-filled);
   color: #fff;
-  border-color: #1f6feb;
+  border-color: var(--mantine-color-blue-filled);
 }
 
-button:disabled {
+:where(button:disabled) {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+/* ProblemDetailsAlert: plain on purpose (it is also rendered outside Mantine), styled like a light red Alert. */
 .alert {
   padding: 10px 12px;
-  border-radius: 6px;
-  background: #ffebe9;
-  border: 1px solid #ff818266;
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-red-light);
+  color: var(--mantine-color-red-9);
+  font-size: var(--mantine-font-size-sm);
 }
 
 .alert p,
@@ -111,9 +57,9 @@ button:disabled {
 
 .card {
   padding: 20px;
-  background: #fff;
-  border: 1px solid #d0d7de;
-  border-radius: 8px;
+  background: var(--mantine-color-body);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-md);
   margin-bottom: 16px;
 }
 
