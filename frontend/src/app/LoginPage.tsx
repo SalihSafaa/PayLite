@@ -1,13 +1,14 @@
-import { Anchor, Button, Container, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
+import { Anchor, Button, PasswordInput, Stack, Text, TextInput } from '@mantine/core'
 import { useState, type FormEvent } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { walletApi } from '../shared/api/clients'
 import { toProblemDetails, type ProblemDetails } from '../shared/api/problemDetails'
 import { useAuth } from '../shared/auth/useAuth'
 import { ProblemDetailsAlert } from '../shared/components/ProblemDetailsAlert'
+import { AuthLayout } from './AuthLayout'
 
 export function LoginPage() {
-  const { signIn } = useAuth()
+  const { user, signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [username, setUsername] = useState('')
@@ -40,23 +41,22 @@ export function LoginPage() {
     }
   }
 
+  // Already logged in (e.g. back button or a bookmark): go to the wallet instead.
+  if (user) return <Navigate to="/" replace />
+
   return (
-    <Container size={420} py="xl">
-      <Title order={2} ta="center">Welcome back</Title>
-      <Text c="dimmed" size="sm" ta="center" mb="lg">Log in to your PayLite wallet</Text>
-      <Paper withBorder shadow="sm" p="lg" radius="md">
-        <form onSubmit={handleSubmit} noValidate>
-          <Stack>
-            <TextInput label="Username" value={username} onChange={(e) => setUsername(e.currentTarget.value)} autoComplete="username" maxLength={50} />
-            <PasswordInput label="Password" value={password} onChange={(e) => setPassword(e.currentTarget.value)} autoComplete="current-password" maxLength={100} />
-            <ProblemDetailsAlert problem={problem} />
-            <Button type="submit" fullWidth loading={submitting}>Log in</Button>
-          </Stack>
-        </form>
-      </Paper>
-      <Text size="sm" ta="center" mt="md">
-        No account? <Anchor component={Link} to="/register">Register</Anchor>
+    <AuthLayout title="Log in" subtitle="Welcome back. Log in to your wallet.">
+      <form onSubmit={handleSubmit} noValidate>
+        <Stack>
+          <TextInput label="Username" value={username} onChange={(e) => setUsername(e.currentTarget.value)} autoComplete="username" maxLength={50} />
+          <PasswordInput label="Password" value={password} onChange={(e) => setPassword(e.currentTarget.value)} autoComplete="current-password" maxLength={100} />
+          <ProblemDetailsAlert problem={problem} />
+          <Button type="submit" fullWidth size="md" loading={submitting}>Log in</Button>
+        </Stack>
+      </form>
+      <Text size="sm" mt="lg">
+        New to PayLite? <Anchor component={Link} to="/register" fw={500}>Create an account</Anchor>
       </Text>
-    </Container>
+    </AuthLayout>
   )
 }

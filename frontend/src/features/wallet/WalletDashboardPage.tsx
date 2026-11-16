@@ -1,91 +1,89 @@
-import { Anchor, Badge, Button, Card, Group, Loader, Stack, Text, Title } from '@mantine/core'
+import { Anchor, Card, Group, Modal, SimpleGrid, Text, Title, UnstyledButton } from '@mantine/core'
+import { useDisclosure } from '@mantine/hooks'
+import { IconArrowsExchange, IconBell, IconHistory, IconPlus, IconReceipt, IconSend } from '@tabler/icons-react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ProblemDetailsAlert } from '../../shared/components/ProblemDetailsAlert'
-import { formatMoney } from '../../shared/lib/money'
+import { useAuth } from '../../shared/auth/useAuth'
+import { PageHeader } from '../../shared/components/PageHeader'
+import { EmptyState, ErrorState, LoadingState } from '../../shared/components/States'
+import { ActivityList } from './ActivityList'
 import { TopUpForm } from './TopUpForm'
-import { TransferTable } from './TransferTable'
 import { useMyWallet } from './useMyWallet'
 import { useTransferHistory } from './useTransferHistory'
+import { WalletCard } from './WalletCard'
+
+function QuickAction({ icon, label, to, onClick }: { icon: ReactNode; label: string; to?: string; onClick?: () => void }) {
+    const content = (
+        <>
+            <span className="quick-action-icon" aria-hidden="true">{icon}</span>
+            <Text fw={600} size="sm">{label}</Text>
+        </>
+    )
+    return to ? (
+        <UnstyledButton component={Link} to={to} className="quick-action">{content}</UnstyledButton>
+    ) : (
+        <UnstyledButton onClick={onClick} className="quick-action">{content}</UnstyledButton>
+    )
+}
 
 function RecentTransactions() {
     const { data, loading, problem, reload } = useTransferHistory(1, 5)
 
-    if (loading) {
-        return (
-            <Group gap="xs">
-                <Loader size="xs" />
-                <Text c="dimmed" size="sm">Loading transactions…</Text>
-            </Group>
-        )
-    }
-    if (problem) {
-        return (
-            <Stack align="start">
-                <ProblemDetailsAlert problem={problem} />
-                <Button variant="default" onClick={reload}>Try again</Button>
-            </Stack>
-        )
-    }
+    if (loading) return <LoadingState label="Loading transactions…" />
+    if (problem) return <ErrorState problem={problem} onRetry={reload} />
     if (!data || data.totalCount === 0) {
         return (
-            <Text c="dimmed">
-                No transactions yet. <Anchor component={Link} to="/send">Send money</Anchor>
-            </Text>
+            <EmptyState icon={<IconArrowsExchange size={24} stroke={1.75} />} title="No transactions yet">
+                Money you send and receive shows up here. <Anchor component={Link} to="/send">Send money</Anchor>
+            </EmptyState>
         )
     }
-    return (
-        <>
-            <TransferTable items={data.items} />
-            {data.totalCount > data.items.length && (
-                <Anchor component={Link} to="/history" size="sm">See all {data.totalCount} transactions</Anchor>
-            )}
-        </>
-    )
+    return <ActivityList items={data.items} />
 }
 
 export function WalletDashboardPage() {
+    const { user } = useAuth()
     const { wallet, setWallet, loading, problem, reload } = useMyWallet()
+    const [topUpOpen, topUp] = useDisclosure(false)
 
-    if (loading && !wallet) {
-        return (
-            <Group gap="xs">
-                <Loader size="sm" />
-                <Text c="dimmed">Loading your wallet…</Text>
-            </Group>
-        )
-    }
-
-    if (problem && !wallet) {
-        return (
-            <Stack align="start">
-                <ProblemDetailsAlert problem={problem} />
-                <Button variant="default" onClick={reload}>Try again</Button>
-            </Stack>
-        )
-    }
-
+    if (loading && !wallet) return <LoadingState label="Loading your wallet…" />
+    if (problem && !wallet) return <ErrorState problem={problem} onRetry={reload} />
     if (!wallet) return null
 
     return (
-        <Stack>
-            <Title order={2}>Wallet</Title>
-            <Card withBorder radius="md" p="lg">
-                <Group justify="space-between" align="start">
-                    <div>
-                        <Text c="dimmed" size="sm">Balance</Text>
-                        <Text fz={36} fw={700} lh={1.2}>{formatMoney(wallet.balance, wallet.currency)}</Text>
-                    </div>
-                    {wallet.isMerchant && <Badge size="lg" variant="light">Merchant</Badge>}
+        <>
+            <PageHeader title={`Hello, ${user?.username ?? ''}`} description="Here is your wallet." />
+
+            <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
+                <WalletCard wallet={wallet} username={user?.username ?? ''} />
+                <SimpleGrid cols={2} spacing="md">
+                    <QuickAction icon={<IconSend size={22} stroke={1.75} />} label="Send money" to="/send" />
+                    <QuickAction icon={<IconPlus size={22} stroke={1.75} />} label="Top up" onClick={topUp.open} />
+                    <QuickAction icon={<IconHistory size={22} stroke={1.75} />} label="History" to="/history" />
+                    {wallet.isMerchant ? (
+                        <QuickAction icon={<IconReceipt size={22} stroke={1.75} />} label="Payments" to="/merchant/payments" />
+                    ) : (
+                        <QuickAction icon={<IconBell size={22} stroke={1.75} />} label="Notifications" to="/notifications" />
+                    )}
+                </SimpleGrid>
+            </SimpleGrid>
+
+            <Card mt="lg">
+                <Group justify="space-between" mb="xs">
+                    <Title order={2} fz="lg">Recent activity</Title>
+                    <Anchor component={Link} to="/history" size="sm" fw={500}>See all</Anchor>
                 </Group>
-                <Group mt="md" align="end" justify="space-between">
-                    <TopUpForm onToppedUp={setWallet} />
-                    <Button component={Link} to="/send">Send money</Button>
-                </Group>
-            </Card>
-            <Card withBorder radius="md" p="lg">
-                <Title order={4} mb="sm">Recent transactions</Title>
                 <RecentTransactions />
             </Card>
-        </Stack>
+
+            <Modal opened={topUpOpen} onClose={topUp.close} title="Top up your wallet" centered radius="lg">
+                <TopUpForm
+                    onToppedUp={(updated) => {
+                        setWallet(updated)
+                        topUp.close()
+                    }}
+                />
+            </Modal>
+        </>
     )
 }

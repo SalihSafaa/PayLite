@@ -1,9 +1,11 @@
-import { Anchor, Button, Container, NativeSelect, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
+import { Anchor, Button, PasswordInput, Radio, Stack, Text, TextInput } from '@mantine/core'
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, Navigate, useNavigate } from 'react-router'
 import { walletApi } from '../shared/api/clients'
 import { toProblemDetails, type ProblemDetails } from '../shared/api/problemDetails'
+import { useAuth } from '../shared/auth/useAuth'
 import { ProblemDetailsAlert } from '../shared/components/ProblemDetailsAlert'
+import { AuthLayout } from './AuthLayout'
 
 // Same rules as RegisterRequestDto in the Wallet API, checked before submit.
 function validate(username: string, password: string): string | null {
@@ -13,6 +15,7 @@ function validate(username: string, password: string): string | null {
 }
 
 export function RegisterPage() {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -44,32 +47,39 @@ export function RegisterPage() {
     }
   }
 
+  if (user) return <Navigate to="/" replace />
+
   return (
-    <Container size={420} py="xl">
-      <Title order={2} ta="center">Create an account</Title>
-      <Text c="dimmed" size="sm" ta="center" mb="lg">A wallet in IQD, ready in a few seconds</Text>
-      <Paper withBorder shadow="sm" p="lg" radius="md">
-        <form onSubmit={handleSubmit} noValidate>
-          <Stack>
-            <TextInput label="Username" value={username} onChange={(e) => setUsername(e.currentTarget.value)} autoComplete="username" maxLength={50} />
-            <PasswordInput label="Password" description="At least 8 characters" value={password} onChange={(e) => setPassword(e.currentTarget.value)} autoComplete="new-password" maxLength={100} />
-            <NativeSelect
-              label="Account type"
-              value={accountType}
-              onChange={(e) => setAccountType(e.currentTarget.value as 'User' | 'Merchant')}
-              data={[
-                { value: 'User', label: 'Personal: send and receive money' },
-                { value: 'Merchant', label: 'Merchant: receive payments from customers' },
-              ]}
-            />
-            <ProblemDetailsAlert problem={problem} />
-            <Button type="submit" fullWidth loading={submitting}>Register</Button>
-          </Stack>
-        </form>
-      </Paper>
-      <Text size="sm" ta="center" mt="md">
-        Already registered? <Anchor component={Link} to="/login">Log in</Anchor>
+    <AuthLayout title="Create an account" subtitle="Your IQD wallet is ready as soon as you register.">
+      <form onSubmit={handleSubmit} noValidate>
+        <Stack>
+          <TextInput label="Username" description="This is how people find you to send money" value={username} onChange={(e) => setUsername(e.currentTarget.value)} autoComplete="username" maxLength={50} />
+          <PasswordInput label="Password" description="At least 8 characters" value={password} onChange={(e) => setPassword(e.currentTarget.value)} autoComplete="new-password" maxLength={100} />
+          <Radio.Group label="Account type" value={accountType} onChange={(v) => setAccountType(v as 'User' | 'Merchant')}>
+            <Stack gap="xs" mt={6}>
+              <Radio.Card value="User" className="choice-card" radius="md">
+                <Radio.Indicator />
+                <div>
+                  <Text fw={600} size="sm">Personal</Text>
+                  <Text c="dimmed" size="xs">Send and receive money</Text>
+                </div>
+              </Radio.Card>
+              <Radio.Card value="Merchant" className="choice-card" radius="md">
+                <Radio.Indicator />
+                <div>
+                  <Text fw={600} size="sm">Merchant</Text>
+                  <Text c="dimmed" size="xs">Receive payments from customers, with a daily summary</Text>
+                </div>
+              </Radio.Card>
+            </Stack>
+          </Radio.Group>
+          <ProblemDetailsAlert problem={problem} />
+          <Button type="submit" fullWidth size="md" loading={submitting}>Create account</Button>
+        </Stack>
+      </form>
+      <Text size="sm" mt="lg">
+        Already have an account? <Anchor component={Link} to="/login" fw={500}>Log in</Anchor>
       </Text>
-    </Container>
+    </AuthLayout>
   )
 }

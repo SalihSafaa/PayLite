@@ -1,174 +1,368 @@
-/* Mantine (src/shared/theme.ts) styles the shell and the Wallet pages. These plain rules are for pages
-   still written in plain HTML. The element rules are wrapped in :where() so they have zero specificity
-   and can never override a Mantine component. Colours follow Mantine's default palette. */
+/* PayLite, styled after the Switch app: white screens, a deep plum card, and the amber-to-coral
+   gradient of Switch's app bars as the one accent. Mantine (src/shared/theme.ts) styles the components;
+   this file holds the few things Mantine doesn't: the layout shells, the wallet card and the chart. */
 
-.page {
-  max-width: 1040px;
-  margin: 0 auto;
+:root {
+  --pl-plum: #3b005a;
+  --pl-plum-deep: #24003a;
+  --pl-orange: #ef6b2d;
+  --pl-blue: #215891;
+  --pl-gradient: linear-gradient(90deg, #fdb45a 0%, #f6874a 45%, #f25b62 100%);
+  --pl-surface: #f7f5fa;
+  --pl-border: #ebe5f1;
+  --pl-muted: #6b5a7b;
+}
+
+body {
+  background: var(--pl-surface);
+  color: #1c1427;
+  -webkit-font-smoothing: antialiased;
+}
+
+.money,
+.wallet-card-balance,
+.stat-value,
+.amount-input {
+  font-variant-numeric: tabular-nums;
 }
 
 .muted {
-  color: var(--mantine-color-dimmed);
+  color: var(--pl-muted);
 }
 
-:where(form) {
-  display: grid;
-  gap: 12px;
+/* ---------- App shell ---------- */
+
+.app-header {
+  border-bottom: 1px solid var(--pl-border);
 }
 
-:where(label) {
-  display: grid;
-  gap: 4px;
-  font-size: 0.9rem;
+/* The Switch app-bar gradient, as a thin strip under the header. */
+.app-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 3px;
+  background: var(--pl-gradient);
 }
 
-:where(input, select, button) {
-  font: inherit;
-  padding: 8px 10px;
-  border-radius: var(--mantine-radius-md);
-  border: 1px solid var(--mantine-color-gray-4);
+.app-main {
+  background: var(--pl-surface);
+  min-height: 100vh;
 }
 
-:where(button) {
-  cursor: pointer;
-  background: var(--mantine-color-blue-filled);
-  color: #fff;
-  border-color: var(--mantine-color-blue-filled);
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
 }
 
-:where(button:disabled) {
-  opacity: 0.6;
-  cursor: not-allowed;
+@media (max-width: 48em) {
+  .page {
+    padding: 20px 16px 48px;
+  }
 }
 
-/* ProblemDetailsAlert: plain on purpose (it is also rendered outside Mantine), styled like a light red Alert. */
-.alert {
-  padding: 10px 12px;
-  border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-red-light);
-  color: var(--mantine-color-red-9);
-  font-size: var(--mantine-font-size-sm);
-}
-
-.alert p,
-.alert ul {
-  margin: 4px 0 0;
-}
-
-.card {
-  padding: 20px;
-  background: var(--mantine-color-body);
-  border: 1px solid var(--mantine-color-gray-3);
-  border-radius: var(--mantine-radius-md);
-  margin-bottom: 16px;
-}
-
-.balance {
-  font-size: 2rem;
-  font-weight: 600;
-  margin: 4px 0;
-}
-
-.badge {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #ddf4ff;
-  font-size: 0.8rem;
-}
-
-.inline-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: end;
-}
-.stack {
-  display: grid;
-  gap: 12px;
-  max-width: 360px;
-  margin-bottom: 12px;
-}
-
-.success {
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: #dafbe1;
-  border: 1px solid #4ac26b66;
-}
-
-.success p {
-  margin: 4px 0;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 12px;
-}
-
-.table th,
-.table td {
-  text-align: left;
-  padding: 8px 6px;
-  border-bottom: 1px solid #d0d7de;
-}
-
-.table .num {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.table .in {
-  color: #1a7f37;
-}
-
-.table .out {
-  color: #cf222e;
-}
-
-.pager {
-  display: flex;
+.nav-link {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  height: 100%;
+  padding: 0 12px;
+  color: var(--pl-muted);
+  font-weight: 500;
+  font-size: 0.95rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 150ms ease;
 }
 
-/* ---------- Activity (Owner B) ---------- */
+.nav-link:hover {
+  color: var(--pl-plum);
+}
+
+.nav-link.active {
+  color: var(--pl-plum);
+  font-weight: 600;
+}
+
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--pl-gradient);
+}
+
+.nav-link-vertical {
+  height: auto;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.nav-link-vertical.active {
+  background: #f6f1fa;
+}
+
+.nav-link-vertical.active::after {
+  left: 0;
+  right: auto;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  height: auto;
+  border-radius: 0 3px 3px 0;
+}
+
+.user-button {
+  padding: 4px 8px 4px 4px;
+  border-radius: 999px;
+  transition: background-color 150ms ease;
+}
+
+.user-button:hover {
+  background: #f6f1fa;
+}
+
+.nav-link:focus-visible,
+.user-button:focus-visible,
+.bell:focus-visible,
+.quick-action:focus-visible,
+.activity-row:focus-visible {
+  outline: 2px solid var(--pl-orange);
+  outline-offset: 2px;
+}
 
 .bell {
   position: relative;
-  text-decoration: none;
-  font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  color: var(--pl-plum);
+  transition: background-color 150ms ease;
+}
+
+.bell:hover {
+  background: #f6f1fa;
 }
 
 .bell-count {
   position: absolute;
-  top: -6px;
-  right: -10px;
+  top: 4px;
+  right: 2px;
   min-width: 18px;
+  height: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: #cf222e;
+  border: 2px solid #fff;
+  background: #c2410c;
   color: #fff;
   font-size: 0.7rem;
-  font-weight: 600;
-  line-height: 18px;
+  font-weight: 700;
+  line-height: 14px;
   text-align: center;
 }
 
-.checkbox {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 12px;
+/* ---------- Login / register ---------- */
+
+.auth-shell {
+  min-height: 100vh;
+  background: #fff;
 }
 
-.checkbox input {
-  width: auto;
+.auth-split {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  min-height: 100vh;
 }
+
+.auth-brand {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px 48px;
+  background: radial-gradient(120% 90% at 0% 100%, #4c0a72 0%, var(--pl-plum) 45%, var(--pl-plum-deep) 100%);
+}
+
+.auth-brand::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--pl-gradient);
+}
+
+.auth-brand-mark {
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.9;
+}
+
+.auth-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+@media (max-width: 62em) {
+  .auth-split {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-brand {
+    display: none;
+  }
+
+  .auth-form {
+    align-items: flex-start;
+    padding-top: 40px;
+  }
+}
+
+.choice-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--pl-border);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.choice-card[data-checked] {
+  border-color: #c2410c;
+  background: #fff3eb;
+}
+
+/* ---------- Wallet ---------- */
+
+/* The balance as a payment card (credit-card proportions), like the card at the heart of the Switch app. */
+.wallet-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 220px;
+  padding: 24px 28px;
+  border-radius: 20px;
+  background: radial-gradient(110% 130% at 100% 0%, #5a1385 0%, var(--pl-plum) 45%, var(--pl-plum-deep) 100%);
+  box-shadow: 0 18px 40px -18px rgba(59, 0, 90, 0.55);
+}
+
+.wallet-card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 5px;
+  background: var(--pl-gradient);
+}
+
+.wallet-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.wallet-card .wallet-card-mark {
+  position: absolute;
+  z-index: 0;
+  right: -36px;
+  bottom: -46px;
+  opacity: 0.22;
+}
+
+.wallet-card-balance {
+  font-size: clamp(2rem, 5vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+/* Service tiles, like the Switch services grid: outline icon in a soft tile. */
+.quick-action {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 100px;
+  padding: 18px;
+  border: 1px solid var(--pl-border);
+  border-radius: 16px;
+  background: #fff;
+  color: #1c1427;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.quick-action:hover {
+  border-color: #f2b28f;
+  box-shadow: 0 6px 18px -10px rgba(194, 65, 12, 0.45);
+}
+
+.quick-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #fff3eb;
+  color: #c2410c;
+}
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.activity-list li + li {
+  border-top: 1px solid var(--pl-border);
+}
+
+.activity-row {
+  display: block;
+  width: 100%;
+  padding: 12px 8px;
+  border-radius: 10px;
+  transition: background-color 150ms ease;
+}
+
+.activity-row:hover {
+  background: var(--pl-surface);
+}
+
+.amount-input {
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.preview-card {
+  background: #fff;
+}
+
+.data-table thead th {
+  color: var(--pl-muted);
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+/* ---------- Notifications ---------- */
 
 .notification-list {
   list-style: none;
@@ -178,53 +372,111 @@
 
 .notification-list li {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
-  padding: 10px 6px;
-  border-bottom: 1px solid #d0d7de;
+  padding: 14px 8px 14px 14px;
+  border-radius: 10px;
+}
+
+.notification-list li + li {
+  margin-top: 2px;
 }
 
 .notification-list li.unread {
-  background: #f6f8fa;
-  border-left: 3px solid #0969da;
+  position: relative;
+  background: #fff8f3;
 }
 
-.notification-list li.read {
-  opacity: 0.7;
+.notification-list li.unread::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 999px;
+  background: #c2410c;
 }
 
-.summary-totals {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 32px;
+/* ---------- Merchant summary ---------- */
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 4px;
 }
 
 .bars {
   display: grid;
-  grid-template-columns: repeat(24, 1fr);
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  gap: 6px;
+  height: 220px;
   align-items: end;
-  gap: 3px;
-  height: 180px;
-  padding-top: 8px;
 }
 
 .bar {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  align-items: center;
   height: 100%;
+  gap: 6px;
+}
+
+.bar-track {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  border-radius: 6px;
+  background: var(--pl-surface);
 }
 
 .bar-fill {
-  background: #0969da;
-  border-radius: 3px 3px 0 0;
-  min-height: 1px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #f25b62 0%, #f6874a 55%, #fdb45a 100%);
 }
 
 .bar-hour {
-  margin-top: 4px;
-  font-size: 0.65rem;
-  color: #57606a;
-  text-align: center;
+  height: 14px;
+  line-height: 14px;
+  font-size: 0.7rem;
+  color: var(--pl-muted);
+}
+
+@media (max-width: 36em) {
+  .bars {
+    gap: 2px;
+    height: 160px;
+  }
+}
+
+/* ---------- Errors (ProblemDetailsAlert stays plain HTML: it is shared and used in tests without Mantine) ---------- */
+
+.alert {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff1f1;
+  border: 1px solid #ffd6d6;
+  color: #8f1d1d;
+  font-size: 0.875rem;
+}
+
+.alert p,
+.alert ul {
+  margin: 4px 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

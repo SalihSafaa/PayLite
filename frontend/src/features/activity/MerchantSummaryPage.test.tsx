@@ -1,4 +1,5 @@
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, screen } from '@testing-library/react'
+import { render } from '../../test/render'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { activityApi } from '../../shared/api/clients'
 import { MerchantSummaryPage } from './MerchantSummaryPage'

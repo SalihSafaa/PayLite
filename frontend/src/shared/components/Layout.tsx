@@ -1,37 +1,23 @@
-import { AppShell, Burger, Button, Drawer, Group, Stack, Text, Title } from '@mantine/core'
+import { AppShell, Avatar, Burger, Drawer, Group, Menu, Stack, Text, UnstyledButton } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { Link, Outlet, useMatch } from 'react-router'
+import { IconChevronDown, IconLogout } from '@tabler/icons-react'
+import { NavLink, Outlet } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { NotificationBell } from '../../features/activity/NotificationBell'
+import { BrandLogo } from './BrandMark'
 
-function NavItem({ to, end = false, onClick, children }: { to: string; end?: boolean; onClick?: () => void; children: string }) {
-  const active = useMatch({ path: to, end }) !== null
-  return (
-    <Button
-      component={Link}
-      to={to}
-      onClick={onClick}
-      variant={active ? 'light' : 'subtle'}
-      size="compact-md"
-      justify="start"
-      aria-current={active ? 'page' : undefined}
-    >
-      {children}
-    </Button>
-  )
-}
-
-function NavLinks({ isMerchant, onNavigate }: { isMerchant: boolean; onNavigate?: () => void }) {
+function NavLinks({ isMerchant, onNavigate, vertical = false }: { isMerchant: boolean; onNavigate?: () => void; vertical?: boolean }) {
+  const cls = vertical ? 'nav-link nav-link-vertical' : 'nav-link'
   return (
     <>
       {/* Owner A */}
-      <NavItem to="/" end onClick={onNavigate}>Wallet</NavItem>
-      <NavItem to="/send" onClick={onNavigate}>Send money</NavItem>
-      <NavItem to="/history" onClick={onNavigate}>History</NavItem>
+      <NavLink to="/" end className={cls} onClick={onNavigate}>Wallet</NavLink>
+      <NavLink to="/send" className={cls} onClick={onNavigate}>Send money</NavLink>
+      <NavLink to="/history" className={cls} onClick={onNavigate}>History</NavLink>
       {/* Owner B */}
-      <NavItem to="/notifications" onClick={onNavigate}>Notifications</NavItem>
-      {isMerchant && <NavItem to="/merchant/payments" onClick={onNavigate}>Payments</NavItem>}
-      {isMerchant && <NavItem to="/merchant/summary" onClick={onNavigate}>Daily summary</NavItem>}
+      <NavLink to="/notifications" className={cls} onClick={onNavigate}>Notifications</NavLink>
+      {isMerchant && <NavLink to="/merchant/payments" className={cls} onClick={onNavigate}>Payments</NavLink>}
+      {isMerchant && <NavLink to="/merchant/summary" className={cls} onClick={onNavigate}>Daily summary</NavLink>}
     </>
   )
 }
@@ -41,37 +27,58 @@ export function Layout() {
   const isMerchant = user?.role === 'Merchant'
   const [menuOpen, menu] = useDisclosure(false)
 
+  // Logged out (login / register): those pages bring their own full-screen layout.
+  if (!user) {
+    return (
+      <main className="auth-shell">
+        <Outlet />
+      </main>
+    )
+  }
+
   return (
-    <AppShell header={{ height: 60 }} padding="md">
-      <AppShell.Header px="md">
-        <Group h="100%" justify="space-between" wrap="nowrap">
-          <Group gap="lg" wrap="nowrap">
-            {user && <Burger opened={menuOpen} onClick={menu.toggle} hiddenFrom="md" size="sm" aria-label="Open menu" />}
-            <Title order={3} c="blue.7">PayLite</Title>
-            {user && (
-              <Group component="nav" gap={4} wrap="nowrap" visibleFrom="md">
-                <NavLinks isMerchant={isMerchant} />
-              </Group>
-            )}
-          </Group>
-          {user && (
-            <Group gap="sm" wrap="nowrap">
-              <NotificationBell />
-              <Text size="sm" c="dimmed" visibleFrom="sm">{user.username}</Text>
-              <Button variant="default" size="compact-md" onClick={signOut}>Log out</Button>
+    <AppShell header={{ height: 64 }} padding={0}>
+      <AppShell.Header className="app-header">
+        <Group h="100%" px={{ base: 'md', sm: 'xl' }} justify="space-between" wrap="nowrap">
+          <Group gap="xl" wrap="nowrap" h="100%">
+            <Burger opened={menuOpen} onClick={menu.toggle} hiddenFrom="md" size="sm" aria-label="Open menu" />
+            <BrandLogo />
+            <Group component="nav" gap={4} wrap="nowrap" h="100%" visibleFrom="md" aria-label="Main">
+              <NavLinks isMerchant={isMerchant} />
             </Group>
-          )}
+          </Group>
+          <Group gap="sm" wrap="nowrap">
+            <NotificationBell />
+            <Menu position="bottom-end" width={200} shadow="md">
+              <Menu.Target>
+                <UnstyledButton className="user-button" aria-label={`Account menu for ${user.username}`}>
+                  <Group gap={8} wrap="nowrap">
+                    <Avatar size={32} radius="xl" color="plum" variant="filled">
+                      {user.username.slice(0, 1).toUpperCase()}
+                    </Avatar>
+                    <Text size="sm" fw={500} visibleFrom="sm" maw={140} truncate>{user.username}</Text>
+                    <IconChevronDown size={16} stroke={1.75} aria-hidden="true" />
+                  </Group>
+                </UnstyledButton>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Label>{isMerchant ? 'Merchant account' : 'Personal account'}</Menu.Label>
+                <Menu.Item leftSection={<IconLogout size={16} stroke={1.75} />} onClick={signOut}>
+                  Log out
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
         </Group>
       </AppShell.Header>
 
-      {/* Small screens: the same links in a drawer. */}
-      <Drawer opened={menuOpen} onClose={menu.close} size="xs" title="PayLite" hiddenFrom="md">
-        <Stack component="nav" gap={4}>
-          <NavLinks isMerchant={isMerchant} onNavigate={menu.close} />
+      <Drawer opened={menuOpen} onClose={menu.close} size="xs" title={<BrandLogo />} hiddenFrom="md">
+        <Stack component="nav" gap={2} aria-label="Main">
+          <NavLinks isMerchant={isMerchant} onNavigate={menu.close} vertical />
         </Stack>
       </Drawer>
 
-      <AppShell.Main bg="gray.0">
+      <AppShell.Main className="app-main">
         <div className="page">
           <Outlet />
         </div>

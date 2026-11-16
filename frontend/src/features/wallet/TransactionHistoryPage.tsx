@@ -1,7 +1,10 @@
-import { Anchor, Button, Card, Group, Loader, Stack, Text, Title } from '@mantine/core'
+import { Anchor, Card } from '@mantine/core'
+import { IconArrowsExchange } from '@tabler/icons-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { ProblemDetailsAlert } from '../../shared/components/ProblemDetailsAlert'
+import { PageHeader } from '../../shared/components/PageHeader'
+import { Pager } from '../../shared/components/Pager'
+import { EmptyState, ErrorState, LoadingState } from '../../shared/components/States'
 import { TransferTable } from './TransferTable'
 import { useTransferHistory } from './useTransferHistory'
 
@@ -20,46 +23,26 @@ export function TransactionHistoryPage() {
     }
 
     return (
-        <Stack>
-            <Title order={2}>Transaction history</Title>
-            <Card withBorder radius="md" p="lg">
-                {loading && (
-                    <Group gap="xs">
-                        <Loader size="xs" />
-                        <Text c="dimmed" size="sm">Loading transactions…</Text>
-                    </Group>
-                )}
+        <>
+            <PageHeader title="Transaction history" description="Everything you sent and received, newest first." />
+            <Card>
+                {loading && <LoadingState label="Loading transactions…" />}
 
-                {!loading && problem && (
-                    <Stack align="start">
-                        <ProblemDetailsAlert problem={problem} />
-                        <Button variant="default" onClick={reload}>Try again</Button>
-                    </Stack>
-                )}
+                {!loading && problem && <ErrorState problem={problem} onRetry={reload} />}
 
                 {!loading && !problem && data && data.totalCount === 0 && (
-                    <Text c="dimmed">
+                    <EmptyState icon={<IconArrowsExchange size={24} stroke={1.75} />} title="Your history is empty">
                         No transactions yet. <Anchor component={Link} to="/send">Send money</Anchor> to get started.
-                    </Text>
+                    </EmptyState>
                 )}
 
                 {!loading && !problem && data && data.totalCount > 0 && (
-                    <Stack>
+                    <>
                         <TransferTable items={data.items} />
-                        <Group justify="space-between">
-                            <Button variant="default" onClick={() => goTo(page - 1)} disabled={page <= 1}>
-                                Previous
-                            </Button>
-                            <Text size="sm" c="dimmed">
-                                Page {page} of {totalPages} · {data.totalCount} {data.totalCount === 1 ? 'transaction' : 'transactions'}
-                            </Text>
-                            <Button variant="default" onClick={() => goTo(page + 1)} disabled={page >= totalPages}>
-                                Next
-                            </Button>
-                        </Group>
-                    </Stack>
+                        <Pager page={page} totalPages={totalPages} total={data.totalCount} noun={['transaction', 'transactions']} onPage={goTo} />
+                    </>
                 )}
             </Card>
-        </Stack>
+        </>
     )
 }
