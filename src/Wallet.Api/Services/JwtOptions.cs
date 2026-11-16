@@ -13,4 +13,10 @@ public sealed class JwtOptions
     [Required(ErrorMessage = "JWT audience is required.")]
     public string Audience { get; set; } = string.Empty;
     public int ExpirationMinutes { get; set; } = 1;
+
+    /// <summary>
+    /// Secure flag on the refresh-token cookie. Browsers treat http://localhost as secure, so this stays
+    /// true for compose; set it to false only to test over plain http on another host name.
+    /// </summary>
+    public bool RefreshCookieSecure { get; set; } = true;
 }

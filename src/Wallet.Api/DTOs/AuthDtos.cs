@@ -54,7 +54,10 @@ public class UserUpdateDto
 }
 public class RefreshRequestDto
 {
-    [Required(ErrorMessage = "Refresh token is required.")]
+    /// <summary>
+    /// Optional: the browser sends no body and the token comes from the httpOnly cookie instead
+    /// (ADR-0003). Other clients (and the tests) can still send it here.
+    /// </summary>
     [StringLength(88, ErrorMessage = "Refresh token cannot exceed 88 characters.")]
-    public string RefreshToken { get; set; } = string.Empty;
+    public string? RefreshToken { get; set; }
 }

@@ -7,7 +7,7 @@ public class RefreshTokenService : IRefreshTokenService
 {
     private readonly WalletDbContext _context;
     private readonly ILogger<RefreshTokenService> _logger;
-    private const int ExpirationDays = 7;
+    public const int ExpirationDays = 7;
 
     public RefreshTokenService(WalletDbContext context, ILogger<RefreshTokenService> logger)
     {
