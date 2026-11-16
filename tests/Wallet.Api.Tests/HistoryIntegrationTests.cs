@@ -55,6 +55,36 @@ public class HistoryIntegrationTests : IClassFixture<WalletApiFactory>
         Assert.All(items, item => Assert.Equal("IQD", item.Currency));
     }
 
+    [Theory]
+    [InlineData("Sent", new[] { 300.0, 100.0 })]
+    [InlineData("received", new[] { 200.0 })]
+    [InlineData("All", new[] { 300.0, 200.0, 100.0 })]
+    public async Task History_FilteredByDirection_ReturnsOnlyThatSide(string direction, double[] expectedAmounts)
+    {
+        var alice = await CreateUserAsync(balance: 10_000);
+        var bob = await CreateUserAsync(balance: 5_000);
+
+        await SendAsync(alice.Client, bob.Username, 100m);
+        await SendAsync(bob.Client, alice.Username, 200m);
+        await SendAsync(alice.Client, bob.Username, 300m);
+
+        var page = await GetHistoryAsync(alice.Client, $"?direction={direction}");
+
+        Assert.Equal(expectedAmounts.Length, page.TotalCount);
+        Assert.Equal(expectedAmounts.Select(a => (decimal)a), page.Items.Select(i => i.Amount));
+        Assert.All(page.Items, item => Assert.Equal(TransferStatus.Completed, item.Status));
+    }
+
+    [Fact]
+    public async Task History_UnknownDirection_Returns400()
+    {
+        var alice = await CreateUserAsync();
+
+        var response = await alice.Client.GetAsync("/api/transfers?direction=sideways");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     [Fact]
     public async Task History_Paging_ReturnsTheRightSlice()
     {
@@ -127,7 +157,6 @@ public class HistoryIntegrationTests : IClassFixture<WalletApiFactory>
 
         await SendAsync(alice.Client, shop.Username, 100m);
         await SendAsync(bob.Client, shop.Username, 200m);
-        await SendAsync(shop.Client, alice.Username, 50m); // outgoing: must not be listed
 
         var response = await shop.Client.GetAsync("/api/merchants/me/payments?page=1&pageSize=10");
         response.EnsureSuccessStatusCode();

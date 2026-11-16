@@ -34,6 +34,17 @@ public class TransferService : ITransferService
             return Result<TransferOutcome>.Failure(ErrorType.Validation,
                 $"A single transfer cannot exceed {_options.MaxTransferAmount:N0} {WalletDefaults.Currency}.");
 
+        // Merchant accounts only receive payments. Checked on the role in the database, not the one in the
+        // JWT, so it holds even for a token issued before a role change. Nothing is stored for a refused
+        // request (no idempotency key, no transfer), so this is safe to check before the procedure.
+        var senderRole = await _context.Users.AsNoTracking()
+            .Where(u => u.Id == fromUserId)
+            .Select(u => u.Role)
+            .SingleOrDefaultAsync();
+        if (senderRole == Roles.Merchant)
+            return Result<TransferOutcome>.Failure(ErrorType.Forbidden,
+                "Merchant accounts can only receive payments, not send money.");
+
         var transferId = new SqlParameter("@TransferId", SqlDbType.BigInt) { Direction = ParameterDirection.Output };
         var newBalance = new SqlParameter("@NewBalance", SqlDbType.Decimal) { Direction = ParameterDirection.Output, Precision = 18, Scale = 2 };
         var replayed = new SqlParameter("@Replayed", SqlDbType.Bit) { Direction = ParameterDirection.Output };
@@ -87,16 +98,27 @@ public class TransferService : ITransferService
         }, wasReplayed));
     }
 
-    public async Task<Result<PagedResponseDto<TransferHistoryItemDto>>> GetHistoryAsync(int userId, PageRequestDto page)
+    public async Task<Result<PagedResponseDto<TransferHistoryItemDto>>> GetHistoryAsync(int userId, PageRequestDto page, string? direction = null)
     {
+        // null / "All": both sides. Anything else that isn't Sent or Received is a 400, not a silent "All".
+        var onlySent = string.Equals(direction, TransferDirection.Sent, StringComparison.OrdinalIgnoreCase);
+        var onlyReceived = string.Equals(direction, TransferDirection.Received, StringComparison.OrdinalIgnoreCase);
+        if (!string.IsNullOrEmpty(direction) && !onlySent && !onlyReceived
+            && !string.Equals(direction, "All", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<PagedResponseDto<TransferHistoryItemDto>>.Failure(ErrorType.Validation,
+                "direction must be All, Sent or Received.");
+        }
+
         var walletId = await GetWalletIdAsync(userId);
         if (walletId is null)
             return Result<PagedResponseDto<TransferHistoryItemDto>>.Failure(ErrorType.NotFound, "Wallet not found.");
 
         // Sent OR received. SQL Server can serve each side from its own index
         // (FromWalletId, CreatedAt) / (ToWalletId, CreatedAt). Id breaks ties in the same instant.
-        var query = _context.Transfers.AsNoTracking()
-            .Where(t => t.FromWalletId == walletId || t.ToWalletId == walletId);
+        var query = onlySent ? _context.Transfers.AsNoTracking().Where(t => t.FromWalletId == walletId)
+            : onlyReceived ? _context.Transfers.AsNoTracking().Where(t => t.ToWalletId == walletId)
+            : _context.Transfers.AsNoTracking().Where(t => t.FromWalletId == walletId || t.ToWalletId == walletId);
 
         var totalCount = await query.CountAsync();
         var items = await query
@@ -111,7 +133,8 @@ public class TransferService : ITransferService
                 Amount = t.Amount,
                 Currency = t.Currency,
                 CreatedAt = t.CreatedAt,
-                BalanceAfter = t.FromWalletId == walletId ? t.FromBalanceAfter : null
+                BalanceAfter = t.FromWalletId == walletId ? t.FromBalanceAfter : null,
+                Status = TransferStatus.Completed
             })
             .ToListAsync();
 

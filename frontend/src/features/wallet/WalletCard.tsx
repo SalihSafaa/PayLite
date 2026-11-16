@@ -93,6 +93,7 @@ export function WalletCard({ wallet, username }: { wallet: WalletDto; username: 
             Show details
           </Button>
         )}
+        <Text c="plum.1" size="xs">PayLite</Text>
       </Group>
 
       <OtpModal

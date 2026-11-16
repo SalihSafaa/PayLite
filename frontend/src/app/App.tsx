@@ -9,6 +9,7 @@ import { AuthProvider } from '../shared/auth/AuthProvider'
 import { ProtectedRoute } from '../shared/auth/ProtectedRoute'
 import { Layout } from '../shared/components/Layout'
 import { LoginPage } from './LoginPage'
+import { PolicyPage } from './PolicyPage'
 import { RegisterPage } from './RegisterPage'
 
 export function App() {
@@ -19,14 +20,19 @@ export function App() {
           <Route element={<Layout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/policy" element={<PolicyPage />} />
 
             <Route element={<ProtectedRoute />}>
               {/* Owner A */}
               <Route index element={<WalletDashboardPage />} />
-              <Route path="/send" element={<SendMoneyPage />} />
               <Route path="/history" element={<TransactionHistoryPage />} />
               {/* Owner B */}
               <Route path="/notifications" element={<NotificationsPage />} />
+            </Route>
+
+            {/* Merchant accounts only receive money (the Wallet API refuses their transfers with 403). */}
+            <Route element={<ProtectedRoute roles={['User', 'Admin']} />}>
+              <Route path="/send" element={<SendMoneyPage />} />
             </Route>
 
             <Route element={<ProtectedRoute roles={['Merchant']} />}>
