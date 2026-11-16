@@ -1,6 +1,6 @@
 import { Alert, Anchor, Card, Group, Modal, SimpleGrid, Text, Title, UnstyledButton } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconArrowsExchange, IconBell, IconHistory, IconPlus, IconReceipt, IconSend } from '@tabler/icons-react'
+import { IconArrowsExchange, IconBell, IconChartBar, IconHistory, IconPlus, IconReceipt, IconSend } from '@tabler/icons-react'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../../shared/auth/useAuth'
@@ -30,7 +30,7 @@ function QuickAction({ icon, label, to, onClick }: { icon: ReactNode; label: str
     )
 }
 
-function RecentTransactions() {
+function RecentTransactions({ isMerchant }: { isMerchant: boolean }) {
     const { data, loading, problem, reload } = useTransferHistory(1, 5)
 
     if (loading) return <LoadingState label="Loading transactions…" />
@@ -38,7 +38,11 @@ function RecentTransactions() {
     if (!data || data.totalCount === 0) {
         return (
             <EmptyState icon={<IconArrowsExchange size={24} stroke={1.75} />} title="No transactions yet">
-                Money you send and receive shows up here. <Anchor component={Link} to="/send">Send money</Anchor>
+                {isMerchant ? (
+                    'Payments from your customers show up here.'
+                ) : (
+                    <>Money you send and receive shows up here. <Anchor component={Link} to="/send">Send money</Anchor></>
+                )}
             </EmptyState>
         )
     }
@@ -63,7 +67,11 @@ export function WalletDashboardPage() {
             <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
                 <WalletCard wallet={wallet} username={user?.username ?? ''} />
                 <SimpleGrid cols={2} spacing="md">
-                    <QuickAction icon={<IconSend size={22} stroke={1.75} />} label="Send money" to="/send" />
+                    {wallet.isMerchant ? (
+                        <QuickAction icon={<IconChartBar size={22} stroke={1.75} />} label="Daily summary" to="/merchant/summary" />
+                    ) : (
+                        <QuickAction icon={<IconSend size={22} stroke={1.75} />} label="Send money" to="/send" />
+                    )}
                     <QuickAction icon={<IconPlus size={22} stroke={1.75} />} label="Top up" onClick={topUp.open} />
                     <QuickAction icon={<IconHistory size={22} stroke={1.75} />} label="History" to="/history" />
                     {wallet.isMerchant ? (
@@ -93,7 +101,7 @@ export function WalletDashboardPage() {
                     <Title order={2} fz="lg">Recent activity</Title>
                     <Anchor component={Link} to="/history" size="sm" fw={500}>See all</Anchor>
                 </Group>
-                <RecentTransactions />
+                <RecentTransactions isMerchant={wallet.isMerchant} />
             </Card>
 
             <Modal opened={topUpOpen} onClose={topUp.close} title="Request a top-up" centered radius="lg">

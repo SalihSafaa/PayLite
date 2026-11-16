@@ -58,6 +58,18 @@ async function fillForm(user: ReturnType<typeof userEvent.setup>, toUsername: st
     await user.type(screen.getByLabelText('Amount (IQD)'), amount)
 }
 
+/** Types the one-time code into the dialog's six boxes. */
+async function typeCode(user: ReturnType<typeof userEvent.setup>, code = '123456') {
+    await user.type(await screen.findByLabelText('Digit 1 of 6'), code)
+}
+
+/** Send → the code dialog → type the code → Confirm. What a user does to send money. */
+async function sendWithCode(user: ReturnType<typeof userEvent.setup>, code = '123456') {
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+    await typeCode(user, code)
+    await user.click(screen.getByRole('button', { name: 'Confirm and send' }))
+}
+
 describe('SendMoneyPage', () => {
     beforeEach(() => {
         post.mockReset()
@@ -93,7 +105,10 @@ describe('SendMoneyPage', () => {
         const user = renderPage()
         await fillForm(user, 'bob', '1000')
 
-        await user.dblClick(screen.getByRole('button', { name: 'Send' }))
+        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await typeCode(user)
+        // The double-click that matters is on the button that actually sends.
+        await user.dblClick(screen.getByRole('button', { name: 'Confirm and send' }))
         expect(screen.getByRole('button', { name: 'Sending…' }).hasAttribute('disabled')).toBe(true)
         finish(created(9000))
 
@@ -106,7 +121,9 @@ describe('SendMoneyPage', () => {
         post.mockResolvedValue(created(9000))
         const user = renderPage()
         await fillForm(user, 'bob', '1000')
-        const form = screen.getByRole('button', { name: 'Send' }).closest('form')!
+        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await typeCode(user)
+        const form = screen.getByRole('button', { name: 'Confirm and send' }).closest('form')!
 
         act(() => {
             fireEvent.submit(form)
@@ -121,7 +138,7 @@ describe('SendMoneyPage', () => {
         post.mockResolvedValueOnce(created(9000))
         const user = renderPage()
         await fillForm(user, ' bob ', '1000')
-        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await sendWithCode(user)
 
         await screen.findByRole('status')
         expect(optionsOfCall(0).body).toEqual({ toUsername: 'bob', amount: 1000 })
@@ -135,11 +152,11 @@ describe('SendMoneyPage', () => {
         const user = renderPage()
         await fillForm(user, 'bob', '1000')
 
-        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await sendWithCode(user)
         expect((await screen.findByRole('alert')).textContent).toContain('Insufficient funds.')
-        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await sendWithCode(user)
         expect((await screen.findByRole('alert')).textContent).toContain('Failed to fetch')
-        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await sendWithCode(user)
         await screen.findByRole('status')
 
         expect(post).toHaveBeenCalledTimes(3)
@@ -152,11 +169,11 @@ describe('SendMoneyPage', () => {
         post.mockResolvedValueOnce(created(9000))
         const user = renderPage()
         await fillForm(user, 'bbo', '1000')
-        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await sendWithCode(user)
         await screen.findByRole('alert')
 
         await fillForm(user, 'bob', '1000')
-        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await sendWithCode(user)
         await screen.findByRole('status')
 
         expect(keyOfCall(1)).not.toBe(keyOfCall(0))
@@ -167,7 +184,7 @@ describe('SendMoneyPage', () => {
         post.mockResolvedValueOnce(created(8000))
         const user = renderPage()
         await fillForm(user, 'bob', '1000')
-        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await sendWithCode(user)
 
         const status = await screen.findByRole('status')
         expect(status.textContent).toContain('New balance:')
@@ -175,7 +192,7 @@ describe('SendMoneyPage', () => {
         expect(screen.getByLabelText<HTMLInputElement>('Amount (IQD)').value).toBe('')
 
         await fillForm(user, 'bob', '1000')
-        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await sendWithCode(user)
         // 8,000 is now also the balance in the preview, so check the success message itself.
         await vi.waitFor(() => expect(screen.getByRole('status').textContent).toContain('8,000'))
 
@@ -186,8 +203,59 @@ describe('SendMoneyPage', () => {
         post.mockResolvedValueOnce(created(9000, true))
         const user = renderPage()
         await fillForm(user, 'bob', '1000')
-        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await sendWithCode(user)
 
         expect((await screen.findByRole('status')).textContent).toContain('nothing was sent twice')
+    })
+
+    it('asks for the code before sending, and sends it with the request', async () => {
+        post.mockResolvedValueOnce(created(9000))
+        const user = renderPage()
+        await fillForm(user, 'bob', '1000')
+
+        await user.click(screen.getByRole('button', { name: 'Send' }))
+        expect(await screen.findByText(/Enter the 6-digit code to send/)).toBeTruthy()
+        expect(post).not.toHaveBeenCalled()
+        // Confirm stays disabled until all six digits are there.
+        expect(screen.getByRole('button', { name: 'Confirm and send' }).hasAttribute('disabled')).toBe(true)
+
+        await typeCode(user)
+        await user.click(screen.getByRole('button', { name: 'Confirm and send' }))
+
+        await screen.findByRole('status')
+        expect(optionsOfCall(0).params.header['X-OTP-Code']).toBe('123456')
+    })
+
+    it('keeps the dialog open on a wrong code and retries with the same key', async () => {
+        post.mockResolvedValueOnce({
+            data: undefined,
+            error: { status: 403, type: 'urn:paylite:otp-invalid', title: 'The one-time code is wrong.' },
+            response: new Response(null, { status: 403 }),
+        } as PostResult)
+        post.mockResolvedValueOnce(created(9000))
+        const user = renderPage()
+        await fillForm(user, 'bob', '1000')
+
+        await sendWithCode(user, '654321')
+        expect((await screen.findByRole('alert')).textContent).toContain('The one-time code is wrong.')
+        expect(screen.getByRole('button', { name: 'Confirm and send' })).toBeTruthy() // still in the dialog
+
+        await typeCode(user, '123456')
+        await user.click(screen.getByRole('button', { name: 'Confirm and send' }))
+
+        await screen.findByRole('status')
+        expect(post).toHaveBeenCalledTimes(2)
+        expect(keyOfCall(1)).toBe(keyOfCall(0))
+    })
+
+    it('sends nothing when the dialog is closed', async () => {
+        const user = renderPage()
+        await fillForm(user, 'bob', '1000')
+
+        await user.click(screen.getByRole('button', { name: 'Send' }))
+        await screen.findByLabelText('Digit 1 of 6')
+        await user.keyboard('{Escape}')
+
+        expect(post).not.toHaveBeenCalled()
     })
 })

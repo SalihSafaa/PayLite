@@ -10,11 +10,13 @@ public class WalletsController : ControllerBase
 {
     private readonly IWalletService _walletService;
     private readonly ITopUpService _topUps;
+    private readonly IOtpVerifier _otp;
 
-    public WalletsController(IWalletService walletService, ITopUpService topUps)
+    public WalletsController(IWalletService walletService, ITopUpService topUps, IOtpVerifier otp)
     {
         _walletService = walletService;
         _topUps = topUps;
+        _otp = otp;
     }
 
     [HttpGet("me")]
@@ -24,6 +26,24 @@ public class WalletsController : ControllerBase
         if (!result.IsSuccess)
             return this.ToActionResult(result);
 
+        return Ok(result.Value);
+    }
+
+    /// <summary>The full card number, expiry and CVV. Needs a one-time code in the X-OTP-Code header.</summary>
+    [HttpGet("me/card")]
+    [ProducesResponseType<CardDetailsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<CardDetailsDto>> GetMyCard([FromHeader(Name = OtpOptions.HeaderName)] string? otp)
+    {
+        if (_otp.Check(otp) is { } problem)
+            return StatusCode(StatusCodes.Status403Forbidden, problem);
+
+        var result = await _walletService.GetMyCardAsync(User.GetUserId());
+        if (!result.IsSuccess)
+            return this.ToActionResult(result);
+
+        // Sensitive: don't let a browser or proxy keep a copy.
+        Response.Headers.CacheControl = "no-store";
         return Ok(result.Value);
     }
 

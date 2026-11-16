@@ -480,3 +480,9 @@ body {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* The card number on the wallet card: even digits, a little letter spacing like a real card. */
+.wallet-card .card-number {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}

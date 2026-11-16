@@ -48,7 +48,8 @@ describe('MerchantPaymentsPage', () => {
     expect(rows).toHaveLength(3) // header + 2
     expect(rows[1]?.textContent).toContain('ali')
     expect(rows[1]?.textContent).toContain('25,000')
-    expect(screen.getByText(/Page 1 of 1 · 2 payments/)).toBeTruthy()
+    expect(screen.getByText('2 payments')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
   })
 
   it('pages through the payments', async () => {

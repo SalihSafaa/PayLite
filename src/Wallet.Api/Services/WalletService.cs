@@ -30,8 +30,30 @@ public class WalletService : IWalletService
             })
             .SingleOrDefaultAsync();
 
-        return wallet is null
-            ? Result<WalletDto>.Failure(ErrorType.NotFound, "You don't have a wallet.")
-            : Result<WalletDto>.Success(wallet);
+        if (wallet is null)
+            return Result<WalletDto>.Failure(ErrorType.NotFound, "You don't have a wallet.");
+
+        wallet.CardLast4 = DemoCard.Last4(wallet.Id);
+        return Result<WalletDto>.Success(wallet);
+    }
+
+    public async Task<Result<CardDetailsDto>> GetMyCardAsync(int userId)
+    {
+        var wallet = await _context.Wallets
+            .AsNoTracking()
+            .Where(w => w.UserId == userId)
+            .Select(w => new { w.Id, w.CreatedAt, w.User.Username })
+            .SingleOrDefaultAsync();
+
+        if (wallet is null)
+            return Result<CardDetailsDto>.Failure(ErrorType.NotFound, "You don't have a wallet.");
+
+        return Result<CardDetailsDto>.Success(new CardDetailsDto
+        {
+            HolderName = wallet.Username,
+            Number = DemoCard.Number(wallet.Id),
+            Expiry = DemoCard.Expiry(wallet.CreatedAt),
+            Cvv = DemoCard.Cvv(wallet.Id)
+        });
     }
 }

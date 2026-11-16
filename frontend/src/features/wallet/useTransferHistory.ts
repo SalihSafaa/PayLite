@@ -6,8 +6,10 @@ import { toProblemDetails, type ProblemDetails } from '../../shared/api/problemD
 export type TransferHistoryItem = components['schemas']['TransferHistoryItemDto']
 export type TransferHistoryPage = components['schemas']['TransferHistoryItemDtoPagedResponseDto']
 
-/** Loads one page of GET /api/transfers. Changing page/pageSize or calling reload() fetches again. */
-export function useTransferHistory(page: number, pageSize: number) {
+export type TransferDirectionFilter = 'All' | 'Sent' | 'Received'
+
+/** Loads one page of GET /api/transfers. Changing page/pageSize/direction or calling reload() fetches again. */
+export function useTransferHistory(page: number, pageSize: number, direction: TransferDirectionFilter = 'All') {
     const [data, setData] = useState<TransferHistoryPage | null>(null)
     const [loading, setLoading] = useState(true)
     const [problem, setProblem] = useState<ProblemDetails | null>(null)
@@ -19,7 +21,9 @@ export function useTransferHistory(page: number, pageSize: number) {
         let ignore = false
 
         walletApi
-            .GET('/api/transfers', { params: { query: { page, pageSize } } })
+            .GET('/api/transfers', {
+                params: { query: direction === 'All' ? { page, pageSize } : { page, pageSize, direction } },
+            })
             .then(({ data: result, error }) => {
                 if (ignore) return
                 if (error || !result) {
@@ -39,7 +43,7 @@ export function useTransferHistory(page: number, pageSize: number) {
         return () => {
             ignore = true
         }
-    }, [page, pageSize, attempt])
+    }, [page, pageSize, direction, attempt])
 
     const reload = useCallback(() => {
         setLoading(true)

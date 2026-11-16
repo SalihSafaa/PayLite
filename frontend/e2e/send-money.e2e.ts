@@ -64,7 +64,7 @@ test('a double-clicked transfer is sent once and the merchant sees it live', asy
   const bell = merchantPage.locator('a.bell')
   await expect(bell).toHaveAttribute('aria-label', 'Notifications')
 
-  // Left window: the customer sends 2,500 with a double-click.
+  // Left window: the customer sends 2,500, enters the one-time code and double-clicks Confirm.
   const customerPage = await (await browser.newContext()).newPage()
   const transferPosts: string[] = []
   customerPage.on('request', (r) => {
@@ -76,7 +76,11 @@ test('a double-clicked transfer is sent once and the merchant sees it live', asy
   await customerPage.getByRole('navigation').getByRole('link', { name: 'Send money' }).click()
   await customerPage.getByLabel('Recipient username').fill(merchant)
   await customerPage.getByLabel('Amount (IQD)').fill('2500')
-  await customerPage.getByRole('button', { name: 'Send' }).dblclick()
+  await customerPage.getByRole('button', { name: 'Send' }).click()
+  // The one-time code (demo: 123456), then the double-click on the button that actually sends.
+  await customerPage.getByLabel('Digit 1 of 6').fill('1')
+  await customerPage.keyboard.type('23456')
+  await customerPage.getByRole('button', { name: 'Confirm and send' }).dblclick()
 
   const status = customerPage.getByRole('status')
   await expect(status).toContainText(`Sent IQD 2,500 to ${merchant}.`)

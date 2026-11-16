@@ -33,6 +33,32 @@ public class TransferIntegrationTests : IClassFixture<WalletApiFactory>
     }
 
     [Fact]
+    public async Task Transfer_FromAMerchant_Returns403AndMovesNothing()
+    {
+        var shop = await CreateUserAsync(balance: 5_000, accountType: "Merchant");
+        var bob = await CreateUserAsync();
+
+        var response = await PostTransferAsync(shop.Client, bob.Username, 1_000m);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Contains("only receive", (await response.Content.ReadAsStringAsync()));
+        Assert.Equal(5_000m, (await shop.Client.GetFromJsonAsync<WalletDto>("/api/wallets/me"))!.Balance);
+        Assert.Equal(0m, (await bob.Client.GetFromJsonAsync<WalletDto>("/api/wallets/me"))!.Balance);
+    }
+
+    [Fact]
+    public async Task Transfer_ToAMerchant_StillWorks()
+    {
+        var alice = await CreateUserAsync(balance: 5_000);
+        var shop = await CreateUserAsync(accountType: "Merchant");
+
+        var response = await PostTransferAsync(alice.Client, shop.Username, 1_000m);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(1_000m, (await shop.Client.GetFromJsonAsync<WalletDto>("/api/wallets/me"))!.Balance);
+    }
+
+    [Fact]
     public async Task Transfer_InsufficientFunds_Returns409AndChangesNothing()
     {
         var alice = await CreateUserAsync(balance: 1_000);
@@ -134,12 +160,12 @@ public class TransferIntegrationTests : IClassFixture<WalletApiFactory>
         return await Task.WhenAll(tasks);
     }
 
-    private async Task<TestUser> CreateUserAsync(decimal balance = 0)
+    private async Task<TestUser> CreateUserAsync(decimal balance = 0, string accountType = "User")
     {
         var client = _factory.CreateClient();
         var username = $"u_{Guid.NewGuid():N}"[..30];
 
-        (await client.PostAsJsonAsync("/api/auth/register", new { username, password = Password })).EnsureSuccessStatusCode();
+        (await client.PostAsJsonAsync("/api/auth/register", new { username, password = Password, accountType })).EnsureSuccessStatusCode();
         var login = await client.PostAsJsonAsync("/api/auth/login", new { username, password = Password });
         login.EnsureSuccessStatusCode();
         var tokens = await login.Content.ReadFromJsonAsync<LoginResponseDto>();

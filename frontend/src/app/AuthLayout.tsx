@@ -1,5 +1,6 @@
-import { Box, Stack, Text, Title } from '@mantine/core'
+import { Anchor, Box, Stack, Text, Title } from '@mantine/core'
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import { BrandLogo, BrandMark } from '../shared/components/BrandMark'
 
 /** Login and register: the brand panel on the left (hidden on phones), the form on the right. */
@@ -26,6 +27,9 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
           <Title order={1} fz={28}>{title}</Title>
           <Text c="dimmed" mt={4} mb="xl">{subtitle}</Text>
           {children}
+          <Text size="sm" c="dimmed" mt="xl" ta="center">
+            <Anchor component={Link} to="/policy" c="dimmed">Wallet policy</Anchor>
+          </Text>
         </Box>
       </section>
     </div>

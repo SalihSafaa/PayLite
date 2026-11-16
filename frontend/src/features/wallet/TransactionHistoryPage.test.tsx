@@ -9,6 +9,7 @@ import { TransactionHistoryPage } from './TransactionHistoryPage'
 import type { TransferHistoryItem } from './useTransferHistory'
 
 vi.mock('../../shared/api/clients', () => ({ walletApi: { GET: vi.fn() } }))
+vi.mock('../../shared/auth/useAuth', () => ({ useAuth: () => ({ user: { username: 'ali', role: 'User' } }) }))
 const get = vi.mocked(walletApi.GET)
 
 type GetResult = Awaited<ReturnType<typeof walletApi.GET>>
@@ -22,6 +23,7 @@ function item(transferId: number, direction: 'Sent' | 'Received'): TransferHisto
         currency: 'IQD',
         createdAt: '2026-11-15T10:00:00Z',
         balanceAfter: direction === 'Sent' ? 9000 : null,
+        status: 'Completed',
     }
 }
 
@@ -71,7 +73,10 @@ describe('TransactionHistoryPage', () => {
         expect(rows[1]?.textContent).toContain('carol')
         expect(rows[2]?.textContent).toContain('Sent')
         expect(rows[2]?.textContent).toContain('9,000')
-        expect(screen.getByText(/Page 1 of 1 · 2 transactions/)).toBeTruthy()
+        expect(screen.getByText('2 transactions')).toBeTruthy()
+        // Everything fits on one page: no Previous / Next.
+        expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
+        expect(screen.getAllByText('Completed')).toHaveLength(2)
     })
 
     it('shows the error and loads again on "Try again"', async () => {
@@ -98,5 +103,28 @@ describe('TransactionHistoryPage', () => {
         await screen.findByText(/Page 2 of 2/)
         expect(get).toHaveBeenLastCalledWith('/api/transfers', { params: { query: { page: 2, pageSize: 10 } } })
         expect(screen.getByRole('button', { name: 'Next' }).hasAttribute('disabled')).toBe(true)
+    })
+
+    it('shows only received money when "Received" is picked, from page 1', async () => {
+        get.mockResolvedValueOnce(page([item(2, 'Received'), item(1, 'Sent')], 2))
+        get.mockResolvedValueOnce(page([item(2, 'Received')], 1))
+        const user = renderPage()
+        await screen.findAllByRole('row')
+
+        await user.click(screen.getByRole('radio', { name: 'Received' }))
+
+        await screen.findByText('1 transaction')
+        expect(get).toHaveBeenLastCalledWith('/api/transfers', { params: { query: { page: 1, pageSize: 10, direction: 'Received' } } })
+    })
+
+    it('says so when a filter has nothing', async () => {
+        get.mockResolvedValueOnce(page([item(1, 'Received')], 1))
+        get.mockResolvedValueOnce(page([], 0))
+        const user = renderPage()
+        await screen.findAllByRole('row')
+
+        await user.click(screen.getByRole('radio', { name: 'Sent' }))
+
+        expect(await screen.findByText("You haven't sent any money yet.")).toBeTruthy()
     })
 })

@@ -30,7 +30,8 @@ in [`runbook.md`](runbook.md).
 |---|---|---|
 | `ali` asks to top up 100,000 | Salih | "Top-up requested": it shows as **Pending** under Top-up requests and the balance doesn't change yet. |
 | The admin approves it | Salih | Admin page → **Approve**. `ali`'s request turns **Approved** and the balance shows 100,000 (`formatMoney` everywhere). |
-| `ali` sends 25,000 to `coffeeshop` | Salih | `201`; History shows it; Wallet log line with the correlation id. |
+| `ali` sends 25,000 to `coffeeshop` | Salih | The **one-time code** dialog (demo code **123456**), then `201`; History shows it; Wallet log line with the correlation id. |
+| Show the card details | Salih | The card shows `•••• 1234`; **Show details** asks for the code, then shows number, expiry and CVV for 30 s. |
 | Right window | Aboalhassan | **The bell goes to 1 without a refresh**; Notifications page shows it; Daily summary shows 1 payment / 25,000 in the current hour; Incoming payments lists it. |
 | Follow one transfer | Aboalhassan | `docker compose logs wallet-api activity-service \| grep <id>`: the same id from the HTTP request to the Activity Service. |
 | Mark as read | Aboalhassan | The bell goes back to 0. |
@@ -39,7 +40,7 @@ in [`runbook.md`](runbook.md).
 
 | # | Who | Do | What the audience should see |
 |---|---|---|---|
-| 1 | Salih | Double-click **Send** | One transfer; the button is disabled while in flight; one notification on the right. |
+| 1 | Salih | **Send**, type 123456, then double-click **Confirm and send** | One transfer; the button is disabled while in flight; one notification on the right. A wrong code first, then the right one, still sends once (same Idempotency-Key). |
 | 4 | Salih + Aboalhassan | `docker compose stop kafka`, send 700, `docker compose start kafka` | `201` immediately and the balance moves; `/health` says Degraded; the outbox row has `SentAt = NULL`; ~10 s after Kafka is back: "Published event", then the **notification appears live**. |
 | 6 | Aboalhassan | `docker compose stop activity-service`, send 3 transfers, show the lag, `docker compose start activity-service` | Lag 3 → 0; three "Processed event" lines within a second; 3 notifications, summary total = sum of the 3. |
 | 5 | Aboalhassan | `scripts/publish-sample-event.sh replay`: the outbox re-sends the newest event (runbook drill 5) | Wallet: `Published event <id>` a second time, with the same id. Activity: `already processed, skipping`; the bell, the list and the summary don't change. Explain: the `ProcessedEvents` primary key + one transaction. |
@@ -78,4 +79,5 @@ Expect questions about **each other's** half. Short answers:
 | Isn't a cookie open to CSRF? | `SameSite=Strict` means the browser never sends it on a request started by another site, and `Path=/api/auth` means it only goes to login, refresh and logout. |
 | Why only one refresh at a time? | Every refresh rotates the token. A second request with the old one looks like a stolen token, and reuse detection would log the user out everywhere. |
 | What if `ActivityDb` is wiped? | Reset the consumer group to the earliest offset and replay: the topic keeps events forever, and processing is idempotent and order-independent. |
+| Is the OTP real? | No: it's a demo code (123456, `Otp:DemoCode`). The checks are real: the server refuses a transfer or the card details without it (403, `type: urn:paylite:otp-invalid`), and checks it before the idempotency step so a wrong code stores nothing. A real system would send the code by SMS or an app. |
 | Why can't users top up by themselves? | A top-up is money coming in from outside, so a person (an Admin) approves it. Approving credits the wallet **once**: the credit only happens while the request is still Pending, under a row lock, in the same transaction that marks it Approved, so two admins (or a double-click) can't credit it twice: the second gets 409. An admin can't approve their own request. |
