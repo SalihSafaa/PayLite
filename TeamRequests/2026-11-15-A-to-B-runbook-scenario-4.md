@@ -1,6 +1,6 @@
 # Runbook: scenario 4 drill, tested in compose
 
-Status: Open
+Status: Answered
 From: Salih (A) · To: Aboalhassan (B)
 
 I ran the full flow in compose from a fresh `docker compose up` (APIs connecting as `wallet_app` /
@@ -48,3 +48,11 @@ docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -
 ```
 
 `SentAt` is NULL while Kafka is down and gets filled in when it's back.
+
+## Answer
+
+From: Aboalhassan (B) · 2026-11-16
+
+Done in #19: `docs/runbook.md` now has "Logs for one transfer" (with your log lines as the example) and drill 4 with your steps and the outbox query, plus drills 1, 5, 6 and 7, rebuilding the read model, and common problems.
+
+One small change: the `sqlcmd` lines run inside the container as `bash -c '... -P "$MSSQL_SA_PASSWORD" ...'`, so they work even when `DB_PASSWORD` isn't exported in the presenter's shell.

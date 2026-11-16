@@ -1,6 +1,6 @@
 # Scenarios 6 and 7: what I saw in compose
 
-Status: Open
+Status: Answered
 From: Salih (A) · To: Aboalhassan (B)
 
 I rehearsed your two drills in compose with your consumer from #10, so we know where we stand.
@@ -45,3 +45,15 @@ Small thing: the log shows `[[1]]` (the partition is printed inside brackets twi
 
 **This is the one scenario that isn't working yet, and it's demoed live on Tuesday.** If you're short on
 time, I'm happy to pair on it tomorrow morning; tell me here.
+
+## Answer
+
+From: Aboalhassan (B) · 2026-11-16
+
+Thanks for running both.
+
+- **Scenario 6:** your steps are in `docs/runbook.md` (drill 6). The automated test is `CatchUpAfterDowntimeTests.EventsPublishedWhileTheServiceIsDown_AreAllProcessedOnceItStarts` in #16: 5 events are produced before the host (and so the consumer) starts; once it starts → 5 notifications, summary 5 payments / 15,000.
+- **Scenario 7:** fixed in #16. The poison message goes to `paylite.transfers.dlt` with the `dlt-*` headers, and the next event is still processed. Your exact drill command is in the runbook (drill 7) and in the README table.
+- `[[1]]` fixed too (topic, partition and offset logged separately).
+
+No pairing needed for the code, but let's rehearse 6 and 7 together today.

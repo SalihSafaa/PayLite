@@ -1,6 +1,6 @@
 # CI: run the frontend tests
 
-Status: Open
+Status: Answered
 From: Salih (A) · To: Aboalhassan (B)
 
 My PR adds the first frontend tests (Vitest + Testing Library, `npm test`): the Send money rules
@@ -15,3 +15,9 @@ CI is yours, so could you add one step to the frontend job in `.github/workflows
 ```
 
 Your pages can add `*.test.tsx` files next to them and they'll run in the same step.
+
+## Answer
+
+From: Aboalhassan (B) · 2026-11-16
+
+Done in #18: `- run: npm test` after `npm run lint` in the frontend job. I kept the job's name unchanged so the branch-protection status check still matches. My pages add 18 tests next to yours (33 in total, all green locally).

@@ -4,9 +4,11 @@ A mini digital wallet, built as a team: users top up, send money to each other o
 and the recipient gets a live notification in the browser. Two .NET services, one event in between,
 a React frontend, all running in containers.
 
-> **Status: skeleton.** Auth, infrastructure, CI, the frontend shell and the contracts are in place.
-> The feature work (wallets, transfers, outbox, consumer, notifications, merchant summary) is
-> marked `TODO (Owner A)` / `TODO (Owner B)` in the code.
+> **Status: feature-complete for Demo Day (2026-11-17).** Wallets, top-ups, idempotent transfers, the
+> transactional outbox, the Kafka consumer with a dead-letter topic, notifications (REST + live SignalR),
+> the merchant daily summary and all frontend pages are in, with all seven failure scenarios tested
+> (see [Failure scenarios](#failure-scenarios)). How to run and debug it: [`docs/runbook.md`](docs/runbook.md).
+> Demo script: [`docs/demo-script.md`](docs/demo-script.md).
 
 ## Architecture
 
@@ -208,22 +210,47 @@ cd frontend && npm run lint && npm run build
 
 | # | Scenario | Expected result | Owner | Test |
 |---|---|---|---|---|
-| 1 | The same transfer is submitted twice | Exactly one transfer | A | _TODO_ |
-| 2 | 20 parallel transfers drain a wallet | Balance never negative; the right number succeed | A | _TODO_ |
-| 3 | A→B and B→A at the same moment | Both complete, no deadlock | A | _TODO_ |
-| 4 | Kafka stopped, transfer made, Kafka restarted | Transfer succeeds; notification arrives later | A + B | _TODO_ |
-| 5 | The same event delivered twice | One notification; summary not double-counted | B | _TODO_ |
-| 6 | Activity Service down during transfers, then restarted | Catches up; nothing lost or doubled | B | _TODO_ |
-| 7 | Poison message on the topic | Goes to the dead-letter topic; consumer keeps going | B | _TODO_ |
+| 1 | The same transfer is submitted twice | Exactly one transfer | A | `IdempotencyIntegrationTests.Transfer_WithSameKeyAndSameRequest_ReturnsOriginalResultAndReplayHeader`, `Transfer_ParallelDuplicatesWithSameKey_OnlyOneCreatesTransfer`; frontend: `SendMoneyPage.test.tsx` (double click sends once, same key on retry) |
+| 2 | 20 parallel transfers drain a wallet | Balance never negative; the right number succeed | A | `TransferIntegrationTests.Transfer_20InParallel_ExactlyTenSucceedAndBalanceNeverNegative` |
+| 3 | A→B and B→A at the same moment | Both complete, no deadlock | A | `TransferIntegrationTests.Transfer_BothDirectionsAtOnce_AllSucceedWithoutDeadlock` |
+| 4 | Kafka stopped, transfer made, Kafka restarted | Transfer succeeds; notification arrives later | A + B | `OutboxIntegrationTests.KafkaDown_TransferSucceedsImmediately_EventIsSentWhenKafkaReturns` (Wallet side) + drill 4 in compose ([runbook](docs/runbook.md#drill-4-kafka-down-during-a-transfer)) |
+| 5 | The same event delivered twice | One notification; summary not double-counted | B | `ConsumerIntegrationTests.SameEventTwice_OneNotificationAndNoDoubleCount` (through real Kafka), `TransferEventProcessorTests.SameEventTwice_SecondIsDuplicate_OnlyAppliesEffectsOnce`, `SchemaIntegrationTests.ProcessedEvents_SameEventIdTwice_FailsWith2627` |
+| 6 | Activity Service down during transfers, then restarted | Catches up; nothing lost or doubled | B | `CatchUpAfterDowntimeTests.EventsPublishedWhileTheServiceIsDown_AreAllProcessedOnceItStarts` + drill 6 in compose ([runbook](docs/runbook.md#drill-6-activity-service-down-during-transfers)) |
+| 7 | Poison message on the topic | Goes to the dead-letter topic; consumer keeps going | B | `DeadLetterIntegrationTests.InvalidJson_GoesToDeadLetterTopic_AndTheNextEventIsStillProcessed`, `BytesThatAreNotUtf8_GoToDeadLetterTopic`, `UnknownVersion_GoesToDeadLetterTopic`; transient errors: `RetryIntegrationTests.KeepsFailing_GoesToDeadLetterAfterThreeRetries_AndTheNextEventIsStillProcessed` + drill 7 ([runbook](docs/runbook.md#drill-7-poison-message)) |
 
 ## Concurrency
 
 **Lock ordering (scenario 3).** Test: 20 A→B and 20 B→A transfers fired at the same moment.
 
-- With lowest-id-first locking: 40 × 200, both balances unchanged, 40 transfer rows.
+- With lowest-id-first locking: 40 × 201, both balances unchanged, 40 transfer rows.
 - With “lock the sender first”: 22 × 200, 18 × 500. Each 500 was SQL Server error 1205 (deadlock victim). A→B held A and waited for B while B→A held B and waited for A. SQL Server broke each cycle by killing one transaction. No money was lost, but valid transfers failed at random.
 
-**Scenario 2.** A wallet with 10,000 and 20 parallel transfers of 1,000: exactly 10 × 200 and 10 × 409, the sender ends at 0 and is never negative, the recipient ends at 10,000, and there are 10 transfer rows. `UPDLOCK` makes the second request wait before it reads the balance, so nobody reads a stale value.
+**Scenario 2.** A wallet with 10,000 and 20 parallel transfers of 1,000: exactly 10 × 201 and 10 × 409, the sender ends at 0 and is never negative, the recipient ends at 10,000, and there are 10 transfer rows. `UPDLOCK` makes the second request wait before it reads the balance, so nobody reads a stale value.
+
+**Same transfer twice (scenario 1).** The key lookup in `wallet.usp_Transfer` uses
+`UPDLOCK, HOLDLOCK`, so two requests with the same `Idempotency-Key` can't both miss it: the second
+waits until the first commits, then finds the key and gets the stored result back (201 with
+`Idempotent-Replayed: true`), with no second transfer and no second event. Test: 10 parallel requests with
+one key → 10 × 201, exactly one transfer, balance down by 1,000 once. `HOLDLOCK` locks only that key's
+range, so different users don't wait for each other (300 concurrent transfers between different users
+all succeeded when we measured it on Day 3). A failed transfer (e.g. 409) stores no key, so the same
+key can be retried after a top-up.
+
+**Outbox publisher.** It takes up to 100 unsent rows with `UPDLOCK, READPAST`: a second publisher
+instance would skip rows that are already locked instead of sending them twice. `SentAt` is set only
+after Kafka confirms the write (`Acks=All`, idempotent producer). If Kafka is down, the publisher stops
+the batch and backs off (1 s up to 30 s), so events go out in order once it's back.
+
+**Consumer (scenarios 5–7).** Kafka delivers at least once, so the Activity Service makes the effect
+idempotent instead: the `ProcessedEvents` insert (EventId = primary key), the notification and the
+merchant summary increment share one transaction. A second copy of an event fails that insert with
+error 2627, the transaction rolls back and the event is skipped. The database constraint decides, not a
+"check first, then insert" that two consumers could both pass at the same moment. The offset is committed
+only after that transaction commits (or after the message is safely on `paylite.transfers.dlt`), so a crash
+just redelivers. The summary is built from increments only (`count + 1`, `total + amount`), so the order
+events arrive in doesn't change the totals. A poison message goes straight to the dead-letter topic; a
+transient error (e.g. SQL Server down) is retried 3 times (1 s, 2 s, 4 s) and then dead-lettered, so a
+partition is never blocked for more than a few seconds.
 
 ## Where the skeleton came from
 

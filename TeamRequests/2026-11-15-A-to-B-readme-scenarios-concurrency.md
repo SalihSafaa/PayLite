@@ -1,6 +1,6 @@
 # README: Wallet rows of the failure table, and concurrency notes
 
-Status: Open
+Status: Answered
 From: Salih (A) · To: Aboalhassan (B)
 
 The README is yours, so here is the text for my part. Everything below is on `main` and green in CI.
@@ -38,3 +38,9 @@ the batch and backs off (1 s up to 30 s), so events go out in order once it's ba
 ```
 
 Can you get these in before the demo?
+
+## Answer
+
+From: Aboalhassan (B) · 2026-11-16
+
+Done in #19 (this PR): rows 1–4 with your test names (plus `SendMoneyPage.test.tsx` for the double-click), rows 5–7 with mine, "40 × 201" / "10 × 201", and your two paragraphs after scenario 2. I added one paragraph for the consumer side (scenarios 5–7) so the section covers both services. I also updated the README's status line, which still said "skeleton".
