@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { AdminPage } from '../features/admin/AdminPage'
 import { MerchantPaymentsPage } from '../features/activity/MerchantPaymentsPage'
 import { MerchantSummaryPage } from '../features/activity/MerchantSummaryPage'
 import { NotificationsPage } from '../features/activity/NotificationsPage'
@@ -27,6 +28,10 @@ export function App() {
               <Route path="/history" element={<TransactionHistoryPage />} />
               {/* Owner B */}
               <Route path="/notifications" element={<NotificationsPage />} />
+            </Route>
+
+            <Route element={<ProtectedRoute roles={['Admin']} />}>
+              <Route path="/admin" element={<AdminPage />} />
             </Route>
 
             <Route element={<ProtectedRoute roles={['Merchant']} />}>

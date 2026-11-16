@@ -1,15 +1,19 @@
-import { Button, Chip, Group, Stack, TextInput } from '@mantine/core'
+import { Button, Chip, Group, Stack, Text, TextInput } from '@mantine/core'
 import { useState, type FormEvent } from 'react'
 import { walletApi } from '../../shared/api/clients'
 import { toProblemDetails, type ProblemDetails } from '../../shared/api/problemDetails'
 import { ProblemDetailsAlert } from '../../shared/components/ProblemDetailsAlert'
 import { formatMoney } from '../../shared/lib/money'
-import type { WalletDto } from './useMyWallet'
+import type { TopUpRequest } from './topUps'
 
 const MAX_TOP_UP = 1_000_000 // same as Wallet:MaxTopUpAmount on the server, which has the final say
 const QUICK_AMOUNTS = [10_000, 25_000, 50_000, 100_000]
 
-export function TopUpForm({ onToppedUp }: { onToppedUp: (wallet: WalletDto) => void }) {
+/**
+ * Asks for a top-up. The money isn't added yet: an admin approves the request first (then it's credited) or
+ * rejects it. The parent shows the request with its status.
+ */
+export function TopUpForm({ onRequested }: { onRequested: (request: TopUpRequest) => void }) {
     const [amount, setAmount] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [problem, setProblem] = useState<ProblemDetails | null>(null)
@@ -35,7 +39,7 @@ export function TopUpForm({ onToppedUp }: { onToppedUp: (wallet: WalletDto) => v
                 return
             }
             setAmount('')
-            onToppedUp(data)
+            onRequested(data)
         } catch (err) {
             setProblem(toProblemDetails(err))
         } finally {
@@ -63,7 +67,8 @@ export function TopUpForm({ onToppedUp }: { onToppedUp: (wallet: WalletDto) => v
                     ))}
                 </Group>
                 <ProblemDetailsAlert problem={problem} />
-                <Button type="submit" loading={submitting} fullWidth>Top up</Button>
+                <Text size="sm" c="dimmed">An admin checks every top-up. The money is added once it's approved.</Text>
+                <Button type="submit" loading={submitting} fullWidth>Request top-up</Button>
             </Stack>
         </form>
     )

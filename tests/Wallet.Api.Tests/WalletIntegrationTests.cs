@@ -55,56 +55,6 @@ public class WalletIntegrationTests : IClassFixture<WalletApiFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    [Fact]
-    public async Task TopUp_Valid_IncreasesBalanceAndWritesOneAuditRow()
-    {
-        var client = await CreateLoggedInClientAsync("User");
-
-        var response = await client.PostAsJsonAsync("/api/wallets/me/top-ups", new { amount = 50000 });
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var wallet = await response.Content.ReadFromJsonAsync<WalletDto>();
-        Assert.Equal(50000m, wallet!.Balance);
-        Assert.Equal(1, await CountTopUpsAsync(wallet.Id));
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-100)]
-    [InlineData(1_000_001)]
-    public async Task TopUp_OutOfRange_Returns400AndChangesNothing(decimal amount)
-    {
-        var client = await CreateLoggedInClientAsync("User");
-
-        var response = await client.PostAsJsonAsync("/api/wallets/me/top-ups", new { amount });
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var wallet = await client.GetFromJsonAsync<WalletDto>("/api/wallets/me");
-        Assert.Equal(0m, wallet!.Balance);
-        Assert.Equal(0, await CountTopUpsAsync(wallet.Id));
-    }
-
-    [Fact]
-    public async Task TopUp_20InParallel_NoLostUpdates()
-    {
-        var client = await CreateLoggedInClientAsync("User");
-        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var tasks = Enumerable.Range(0, 20).Select(_ => Task.Run(async () =>
-        {
-            await gate.Task;
-            return (await client.PostAsJsonAsync("/api/wallets/me/top-ups", new { amount = 1000 })).StatusCode;
-        })).ToList();
-
-        gate.SetResult();
-        var statuses = await Task.WhenAll(tasks);
-
-        Assert.All(statuses, status => Assert.Equal(HttpStatusCode.OK, status));
-        var wallet = await client.GetFromJsonAsync<WalletDto>("/api/wallets/me");
-        Assert.Equal(20000m, wallet!.Balance);
-        Assert.Equal(20, await CountTopUpsAsync(wallet.Id));
-    }
-
     // ---------- helpers ----------
 
     private static string NewUsername() => $"u_{Guid.NewGuid():N}"[..30];
@@ -126,10 +76,4 @@ public class WalletIntegrationTests : IClassFixture<WalletApiFactory>
         return client;
     }
 
-    private async Task<int> CountTopUpsAsync(int walletId)
-    {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<WalletDbContext>();
-        return await context.TopUps.CountAsync(t => t.WalletId == walletId);
-    }
 }

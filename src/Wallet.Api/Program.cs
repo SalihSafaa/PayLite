@@ -71,6 +71,7 @@ builder.Services.AddScoped<IPasswordHasher, Argon2PasswordHasher>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<ITopUpService, TopUpService>();
 builder.Services.AddScoped<ITransferService, TransferService>();
 builder.Services.AddHostedService<IdempotencyKeyCleanupService>();
 builder.Services.AddHostedService<OutboxPublisher>();

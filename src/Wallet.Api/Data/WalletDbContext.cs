@@ -113,9 +113,20 @@ public class WalletDbContext : DbContext
 
         modelBuilder.Entity<TopUp>(entity =>
         {
-            entity.ToTable(table => table.HasCheckConstraint("CK_TopUps_Amount_Positive", "[Amount] > 0"));
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_TopUps_Amount_Positive", "[Amount] > 0");
+                table.HasCheckConstraint("CK_TopUps_Status", "[Status] IN ('Pending', 'Approved', 'Rejected')");
+                // Approved <=> credited: the balance after the credit is there exactly when it was approved.
+                table.HasCheckConstraint("CK_TopUps_BalanceAfter_WhenApproved",
+                    "([Status] = 'Approved' AND [BalanceAfter] IS NOT NULL) OR ([Status] <> 'Approved' AND [BalanceAfter] IS NULL)");
+            });
             entity.Property(topUp => topUp.Amount).HasPrecision(18, 2);
             entity.Property(topUp => topUp.BalanceAfter).HasPrecision(18, 2);
+            entity.Property(topUp => topUp.Status).HasMaxLength(20);
+            entity.Property(topUp => topUp.ReviewedBy).HasMaxLength(256);
+            // The admin page lists the pending requests, oldest first.
+            entity.HasIndex(topUp => new { topUp.Status, topUp.CreatedAt });
             entity.Property(topUp => topUp.CreatedBy).HasMaxLength(256);
             entity.Property(topUp => topUp.LastUpdatedBy).HasMaxLength(256);
             entity.HasIndex(topUp => topUp.WalletId);

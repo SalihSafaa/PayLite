@@ -10,7 +10,7 @@ public class WalletDto
     public bool IsMerchant { get; set; }
 }
 
-public class TopUpRequestDto
+public class CreateTopUpDto
 {
     // IQD has no fractional unit; the maximum (Wallet:MaxTopUpAmount) is checked in WalletService.
     [Range(typeof(decimal), "1", "79228162514264337593543950335", ErrorMessage = "Amount must be at least one whole dinar.")]

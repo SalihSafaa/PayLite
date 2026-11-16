@@ -82,7 +82,7 @@ public class IdempotencyIntegrationTests : IClassFixture<WalletApiFactory>
         var failed = await PostTransferAsync(alice.Client, bob.Username, 1_000m, key);
         Assert.Equal(HttpStatusCode.Conflict, failed.StatusCode);
 
-        (await alice.Client.PostAsJsonAsync("/api/wallets/me/top-ups", new { amount = 1_000m })).EnsureSuccessStatusCode();
+        await TestFunding.TopUpAsync(_factory, alice.Client, 1_000m);
         var retried = await PostTransferAsync(alice.Client, bob.Username, 1_000m, key);
 
         Assert.Equal(HttpStatusCode.Created, retried.StatusCode);
@@ -176,7 +176,7 @@ public class IdempotencyIntegrationTests : IClassFixture<WalletApiFactory>
 
         if (balance > 0)
         {
-            (await client.PostAsJsonAsync("/api/wallets/me/top-ups", new { amount = balance })).EnsureSuccessStatusCode();
+            await TestFunding.TopUpAsync(_factory, client, balance);
         }
 
         var wallet = await client.GetFromJsonAsync<WalletDto>("/api/wallets/me");

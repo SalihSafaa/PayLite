@@ -6,7 +6,7 @@ import { useAuth } from '../auth/useAuth'
 import { NotificationBell } from '../../features/activity/NotificationBell'
 import { BrandLogo } from './BrandMark'
 
-function NavLinks({ isMerchant, onNavigate, vertical = false }: { isMerchant: boolean; onNavigate?: () => void; vertical?: boolean }) {
+function NavLinks({ isMerchant, isAdmin = false, onNavigate, vertical = false }: { isMerchant: boolean; isAdmin?: boolean; onNavigate?: () => void; vertical?: boolean }) {
   const cls = vertical ? 'nav-link nav-link-vertical' : 'nav-link'
   return (
     <>
@@ -18,6 +18,7 @@ function NavLinks({ isMerchant, onNavigate, vertical = false }: { isMerchant: bo
       <NavLink to="/notifications" className={cls} onClick={onNavigate}>Notifications</NavLink>
       {isMerchant && <NavLink to="/merchant/payments" className={cls} onClick={onNavigate}>Payments</NavLink>}
       {isMerchant && <NavLink to="/merchant/summary" className={cls} onClick={onNavigate}>Daily summary</NavLink>}
+      {isAdmin && <NavLink to="/admin" className={cls} onClick={onNavigate}>Admin</NavLink>}
     </>
   )
 }
@@ -25,6 +26,7 @@ function NavLinks({ isMerchant, onNavigate, vertical = false }: { isMerchant: bo
 export function Layout() {
   const { user, signOut } = useAuth()
   const isMerchant = user?.role === 'Merchant'
+  const isAdmin = user?.role === 'Admin'
   const [menuOpen, menu] = useDisclosure(false)
 
   // Logged out (login / register): those pages bring their own full-screen layout.
@@ -44,7 +46,7 @@ export function Layout() {
             <Burger opened={menuOpen} onClick={menu.toggle} hiddenFrom="md" size="sm" aria-label="Open menu" />
             <BrandLogo />
             <Group component="nav" gap={4} wrap="nowrap" h="100%" visibleFrom="md" aria-label="Main">
-              <NavLinks isMerchant={isMerchant} />
+              <NavLinks isMerchant={isMerchant} isAdmin={isAdmin} />
             </Group>
           </Group>
           <Group gap="sm" wrap="nowrap">
@@ -74,7 +76,7 @@ export function Layout() {
 
       <Drawer opened={menuOpen} onClose={menu.close} size="xs" title={<BrandLogo />} hiddenFrom="md">
         <Stack component="nav" gap={2} aria-label="Main">
-          <NavLinks isMerchant={isMerchant} onNavigate={menu.close} vertical />
+          <NavLinks isMerchant={isMerchant} isAdmin={isAdmin} onNavigate={menu.close} vertical />
         </Stack>
       </Drawer>
 

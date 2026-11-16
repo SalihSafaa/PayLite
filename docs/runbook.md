@@ -79,7 +79,7 @@ docker compose exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhos
 
 ## Failure drills (Demo Day)
 
-Set up once: register a user and a merchant, top the user up, and log in as the merchant in a second
+Set up once: register a user and a merchant, request a top-up for the user and approve it as the admin (Admin page; the admin login is `ADMIN_SEED_USERNAME` / `ADMIN_SEED_PASSWORD` in `.env`), and log in as the merchant in a second
 browser window (or a private window) with **Notifications** or **Daily summary** open.
 
 ### Drill 1: the same transfer twice
