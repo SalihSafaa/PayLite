@@ -55,8 +55,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero
         };
 
-        // TODO (Owner B): SignalR sends the token as an "access_token" query parameter.
-        // Accept it in options.Events.OnMessageReceived ONLY when the path starts with /hubs/notifications.
+        // Browsers can't set headers on a WebSocket, so SignalR sends the token as ?access_token=.
+        // Accept it ONLY on the hub path (ADR-0003): every other endpoint still needs the Authorization header.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(token) && context.HttpContext.Request.Path.StartsWithSegments(NotificationHub.Path))
+                {
+                    context.Token = token;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 // Applies one Kafka event to ActivityDb (ADR-0004). A new scope (and DbContext) per message.
@@ -67,7 +79,11 @@ if (builder.Configuration.GetValue($"{KafkaOptions.SectionName}:ConsumerEnabled"
     builder.Services.AddHostedService<TransferEventsConsumer>();
 }
 
-// TODO (Owner B): notification + summary endpoints, SignalR hub
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IMerchantSummaryService, MerchantSummaryService>();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<INotificationPusher, SignalRNotificationPusher>();
+
 builder.Services.AddControllers();
 builder.Services.AddDbContext<ActivityDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ActivityDb")));
@@ -130,6 +146,7 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificationHub>(NotificationHub.Path);
 app.MapHealthChecks("/health", new HealthCheckOptions { ResponseWriter = HealthResponseWriter.WriteAsync });
 
 app.Run();
