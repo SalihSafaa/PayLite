@@ -39,10 +39,23 @@ public class UserResponseDto
     public string? LastUpdatedBy { get; set; }
 }
 
+/// <summary>
+/// What UserService returns after login/refresh. Not sent to the client as-is: the refresh token goes into
+/// the httpOnly cookie, and only <see cref="AccessTokenResponseDto"/> goes into the response body.
+/// </summary>
 public class LoginResponseDto
 {
     public string AccessToken { get; set; } = string.Empty;
     public string RefreshToken { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Body of /api/auth/login and /api/auth/refresh. The refresh token is deliberately NOT here: it is only in the
+/// httpOnly cookie, so no JavaScript (and no XSS) can ever read it (ADR-0003).
+/// </summary>
+public class AccessTokenResponseDto
+{
+    public string AccessToken { get; set; } = string.Empty;
 }
 public class UserUpdateDto
 {

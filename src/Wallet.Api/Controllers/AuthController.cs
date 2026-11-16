@@ -29,14 +29,14 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<ActionResult<LoginResponseDto>> Login(LoginRequestDto request)
+    public async Task<ActionResult<AccessTokenResponseDto>> Login(LoginRequestDto request)
     {
         var result = await _userService.LoginAsync(request);
         if (!result.IsSuccess)
             return this.ToActionResult(result);
 
         RefreshTokenCookie.Write(Response, result.Value!.RefreshToken, _secureCookie);
-        return Ok(result.Value);
+        return Ok(new AccessTokenResponseDto { AccessToken = result.Value.AccessToken });
     }
 
     /// <summary>
@@ -44,12 +44,12 @@ public class AuthController : ControllerBase
     /// It is rotated on every use, and the new one is written back to the cookie.
     /// </summary>
     [HttpPost("refresh")]
-    public async Task<ActionResult<LoginResponseDto>> Refresh(
+    public async Task<ActionResult<AccessTokenResponseDto>> Refresh(
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RefreshRequestDto? request)
     {
         var refreshToken = request?.RefreshToken ?? RefreshTokenCookie.Read(Request);
         if (refreshToken is null)
-            return this.ToActionResult(Result<LoginResponseDto>.Failure(ErrorType.UnAuthorized, "No refresh token."));
+            return this.ToActionResult(Result<AccessTokenResponseDto>.Failure(ErrorType.UnAuthorized, "No refresh token."));
 
         var result = await _userService.RefreshAsync(refreshToken);
         if (!result.IsSuccess)
@@ -60,7 +60,7 @@ public class AuthController : ControllerBase
         }
 
         RefreshTokenCookie.Write(Response, result.Value!.RefreshToken, _secureCookie);
-        return Ok(result.Value);
+        return Ok(new AccessTokenResponseDto { AccessToken = result.Value.AccessToken });
     }
 
     [HttpPost("logout")]

@@ -50,7 +50,7 @@ describe('AuthProvider and the refresh cookie', () => {
   })
 
   it('restores the session from the cookie after a page refresh, with ONE refresh call even in StrictMode', async () => {
-    post.mockResolvedValue({ data: { accessToken: fakeToken('salih'), refreshToken: '' }, response: new Response() } as PostResult)
+    post.mockResolvedValue({ data: { accessToken: fakeToken('salih') }, response: new Response() } as PostResult)
 
     renderApp()
 
@@ -71,8 +71,8 @@ describe('AuthProvider and the refresh cookie', () => {
 
   it('refreshes the access token shortly before it expires', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    post.mockResolvedValueOnce({ data: { accessToken: fakeToken('salih', 120), refreshToken: '' }, response: new Response() } as PostResult)
-    post.mockResolvedValueOnce({ data: { accessToken: fakeToken('salih', 900), refreshToken: '' }, response: new Response() } as PostResult)
+    post.mockResolvedValueOnce({ data: { accessToken: fakeToken('salih', 120) }, response: new Response() } as PostResult)
+    post.mockResolvedValueOnce({ data: { accessToken: fakeToken('salih', 900) }, response: new Response() } as PostResult)
 
     renderApp()
     await screen.findByText('user:salih')

@@ -77,9 +77,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["LoginResponseDto"];
-                        "application/json": components["schemas"]["LoginResponseDto"];
-                        "text/json": components["schemas"]["LoginResponseDto"];
+                        "text/plain": components["schemas"]["AccessTokenResponseDto"];
+                        "application/json": components["schemas"]["AccessTokenResponseDto"];
+                        "text/json": components["schemas"]["AccessTokenResponseDto"];
                     };
                 };
             };
@@ -120,9 +120,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["LoginResponseDto"];
-                        "application/json": components["schemas"]["LoginResponseDto"];
-                        "text/json": components["schemas"]["LoginResponseDto"];
+                        "text/plain": components["schemas"]["AccessTokenResponseDto"];
+                        "application/json": components["schemas"]["AccessTokenResponseDto"];
+                        "text/json": components["schemas"]["AccessTokenResponseDto"];
                     };
                 };
             };
@@ -452,6 +452,9 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AccessTokenResponseDto: {
+            accessToken: string;
+        };
         CreateTransferDto: {
             toUsername: string;
             /** Format: double */
@@ -460,10 +463,6 @@ export interface components {
         LoginRequestDto: {
             username: string;
             password: string;
-        };
-        LoginResponseDto: {
-            accessToken: string;
-            refreshToken: string;
         };
         MerchantPaymentDto: {
             /** Format: int64 */
