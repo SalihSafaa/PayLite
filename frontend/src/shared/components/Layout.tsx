@@ -12,7 +12,8 @@ function NavLinks({ isMerchant, onNavigate, vertical = false }: { isMerchant: bo
     <>
       {/* Owner A */}
       <NavLink to="/" end className={cls} onClick={onNavigate}>Wallet</NavLink>
-      <NavLink to="/send" className={cls} onClick={onNavigate}>Send money</NavLink>
+      {/* Merchant accounts only receive money, so they get no Send page. */}
+      {!isMerchant && <NavLink to="/send" className={cls} onClick={onNavigate}>Send money</NavLink>}
       <NavLink to="/history" className={cls} onClick={onNavigate}>History</NavLink>
       {/* Owner B */}
       <NavLink to="/notifications" className={cls} onClick={onNavigate}>Notifications</NavLink>

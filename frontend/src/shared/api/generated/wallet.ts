@@ -327,6 +327,17 @@ export interface paths {
                         "text/json": components["schemas"]["ProblemDetails"];
                     };
                 };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
                 /** @description Not Found */
                 404: {
                     headers: {
