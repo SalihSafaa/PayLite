@@ -16,11 +16,13 @@ public class TransfersController : ControllerBase
         _transferService = transferService;
     }
 
-    /// <summary>The caller's transfers, sent and received, newest first.</summary>
+    /// <summary>The caller's transfers, newest first. <paramref name="direction"/>: All (default), Sent or Received.</summary>
     [HttpGet]
-    public async Task<ActionResult<PagedResponseDto<TransferHistoryItemDto>>> GetHistory([FromQuery] PageRequestDto paging)
+    public async Task<ActionResult<PagedResponseDto<TransferHistoryItemDto>>> GetHistory(
+        [FromQuery] PageRequestDto paging,
+        [FromQuery(Name = "direction")] string? direction = null)
     {
-        var result = await _transferService.GetHistoryAsync(User.GetUserId(), paging);
+        var result = await _transferService.GetHistoryAsync(User.GetUserId(), paging, direction);
         if (!result.IsSuccess)
             return this.ToActionResult(result);
 

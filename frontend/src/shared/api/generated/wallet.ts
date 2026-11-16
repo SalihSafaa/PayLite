@@ -267,6 +267,7 @@ export interface paths {
                 query?: {
                     page?: number;
                     pageSize?: number;
+                    direction?: string;
                 };
                 header?: never;
                 path?: never;
@@ -517,6 +518,7 @@ export interface components {
             createdAt: string;
             /** Format: double */
             balanceAfter?: number | null;
+            status: string;
         };
         TransferHistoryItemDtoPagedResponseDto: {
             items: components["schemas"]["TransferHistoryItemDto"][];

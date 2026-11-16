@@ -21,7 +21,7 @@ export function WalletCard({ wallet, username }: { wallet: WalletDto; username: 
         <Text className="wallet-card-balance" c="white">{formatMoney(wallet.balance, wallet.currency)}</Text>
       </div>
       <Group justify="space-between" align="end">
-        <Text c="white" fw={500}>@{username}</Text>
+        <Text c="white" fw={500}>{username}</Text>
         <Text c="plum.1" size="xs">PayLite</Text>
       </Group>
     </div>

@@ -9,6 +9,7 @@ import { AuthProvider } from '../shared/auth/AuthProvider'
 import { ProtectedRoute } from '../shared/auth/ProtectedRoute'
 import { Layout } from '../shared/components/Layout'
 import { LoginPage } from './LoginPage'
+import { PolicyPage } from './PolicyPage'
 import { RegisterPage } from './RegisterPage'
 
 export function App() {
@@ -19,6 +20,7 @@ export function App() {
           <Route element={<Layout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/policy" element={<PolicyPage />} />
 
             <Route element={<ProtectedRoute />}>
               {/* Owner A */}
