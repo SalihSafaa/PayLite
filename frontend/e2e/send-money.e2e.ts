@@ -11,14 +11,31 @@ async function register(request: APIRequestContext, username: string, accountTyp
   expect(response.status()).toBe(201)
 }
 
+// Top-ups are requests that an admin approves. The admin is the one compose seeds from .env
+// (ADMIN_SEED_USERNAME / ADMIN_SEED_PASSWORD); override with E2E_ADMIN_USERNAME / E2E_ADMIN_PASSWORD.
+const ADMIN_USERNAME = process.env.E2E_ADMIN_USERNAME ?? 'admin'
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'ChangeMe_Admin1!'
+
+async function accessToken(request: APIRequestContext, username: string, password: string) {
+  const login = await request.post('/api/auth/login', { data: { username, password } })
+  expect(login.ok()).toBe(true)
+  return ((await login.json()) as { accessToken: string }).accessToken
+}
+
 async function topUp(request: APIRequestContext, username: string, amount: number) {
-  const login = await request.post('/api/auth/login', { data: { username, password: PASSWORD } })
-  const { accessToken } = (await login.json()) as { accessToken: string }
-  const response = await request.post('/api/wallets/me/top-ups', {
+  const userToken = await accessToken(request, username, PASSWORD)
+  const asked = await request.post('/api/wallets/me/top-ups', {
     data: { amount },
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers: { Authorization: `Bearer ${userToken}` },
   })
-  expect(response.ok()).toBe(true)
+  expect(asked.status()).toBe(202)
+  const { id } = (await asked.json()) as { id: number }
+
+  const adminToken = await accessToken(request, ADMIN_USERNAME, ADMIN_PASSWORD)
+  const approved = await request.post(`/api/admin/top-ups/${id}/approve`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  })
+  expect(approved.ok()).toBe(true)
 }
 
 // The token is kept in memory only, so the test logs in through the UI and then uses the nav links

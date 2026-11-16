@@ -173,7 +173,7 @@ public class TransferIntegrationTests : IClassFixture<WalletApiFactory>
 
         if (balance > 0)
         {
-            (await client.PostAsJsonAsync("/api/wallets/me/top-ups", new { amount = balance })).EnsureSuccessStatusCode();
+            await TestFunding.TopUpAsync(_factory, client, balance);
         }
 
         var wallet = await client.GetFromJsonAsync<WalletDto>("/api/wallets/me");

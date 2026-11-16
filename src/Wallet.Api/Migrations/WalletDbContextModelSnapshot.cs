@@ -175,7 +175,7 @@ namespace PayLite.WalletApi.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("BalanceAfter")
+                    b.Property<decimal?>("BalanceAfter")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -193,6 +193,18 @@ namespace PayLite.WalletApi.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<int>("WalletId")
                         .HasColumnType("int");
 
@@ -200,9 +212,15 @@ namespace PayLite.WalletApi.Migrations
 
                     b.HasIndex("WalletId");
 
+                    b.HasIndex("Status", "CreatedAt");
+
                     b.ToTable("TopUps", "wallet", t =>
                         {
                             t.HasCheckConstraint("CK_TopUps_Amount_Positive", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_TopUps_BalanceAfter_WhenApproved", "([Status] = 'Approved' AND [BalanceAfter] IS NOT NULL) OR ([Status] <> 'Approved' AND [BalanceAfter] IS NULL)");
+
+                            t.HasCheckConstraint("CK_TopUps_Status", "[Status] IN ('Pending', 'Approved', 'Rejected')");
                         });
                 });
 
