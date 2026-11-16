@@ -195,6 +195,7 @@ result is the same as before. Read state (`ReadAt`) is lost, since it isn't an e
 |---|---|
 | `docker compose up` stops at `sqlserver` (Apple Silicon) | Give Docker at least 4 GB of memory; SQL Server runs under emulation. |
 | A transfer works but no notification arrives | `curl localhost:8082/health` (Kafka?), consumer lag (above), and `docker compose logs activity-service` for `Sent ... to paylite.transfers.dlt`. |
-| The bell doesn't update live | Browser dev tools → Network → `hubs/notifications`: it should be a WebSocket with status 101. A 401 means the access token expired: log in again. |
-| `401` on every request after a while | Access tokens last 15 minutes and live in memory only (ADR-0003): log in again. A page refresh also logs you out. |
+| The bell doesn't update live | Browser dev tools → Network → `hubs/notifications`: it should be a WebSocket with status 101. A 401 means the access token had expired when it connected: reload the page (the refresh cookie gives a new one). |
+| `401` on every request after a while | The app refreshes the access token a minute before it expires (ADR-0003). If it still 401s, the refresh cookie is gone or was revoked (logout, reuse detection, 7 days old): log in again. Check dev tools → Application → Cookies → `paylite_refresh` (path `/api/auth`). |
+| Logged out after a page refresh | The `paylite_refresh` cookie wasn't sent: the app must be opened on the same origin as `/api` (http://localhost:3000 in compose, or the Vite dev server). |
 | Something on the dead-letter topic | Read it with the headers (Kafka section): `dlt-reason` and `dlt-error` say why. |
