@@ -12,6 +12,7 @@ public class TransferEventProcessor : ITransferEventProcessor
 {
     private const int PrimaryKeyViolation = 2627;
     private const int UniqueIndexViolation = 2601;
+    private const string SupportedCurrency = "IQD";
 
     private static readonly TimeZoneInfo Baghdad = FindBaghdad();
 
@@ -29,11 +30,12 @@ public class TransferEventProcessor : ITransferEventProcessor
     public async Task<ProcessOutcome> ProcessAsync(string? json, CancellationToken cancellationToken)
     {
         var envelope = Parse(json);
+        var correlationId = CorrelationIds.Sanitize(envelope.CorrelationId);
 
         using var scope = _logger.BeginScope(new Dictionary<string, object>
         {
             ["EventId"] = envelope.EventId,
-            ["CorrelationId"] = envelope.CorrelationId
+            ["CorrelationId"] = correlationId
         });
 
         if (envelope.EventType != EventTypes.TransferCompleted)
@@ -42,7 +44,7 @@ public class TransferEventProcessor : ITransferEventProcessor
                 "Ignoring event {EventId} of type {EventType} (correlation {CorrelationId})",
                 envelope.EventId,
                 envelope.EventType,
-                envelope.CorrelationId);
+                correlationId);
             return ProcessOutcome.IgnoredEventType;
         }
 
@@ -80,7 +82,7 @@ public class TransferEventProcessor : ITransferEventProcessor
             _logger.LogInformation(
                 "Event {EventId} was already processed, skipping (correlation {CorrelationId})",
                 envelope.EventId,
-                envelope.CorrelationId);
+                correlationId);
             return ProcessOutcome.Duplicate;
         }
 
@@ -101,7 +103,7 @@ public class TransferEventProcessor : ITransferEventProcessor
             data.Amount,
             data.Currency,
             data.ToUserId,
-            envelope.CorrelationId);
+            correlationId);
 
         return ProcessOutcome.Processed;
     }
@@ -167,6 +169,13 @@ public class TransferEventProcessor : ITransferEventProcessor
         {
             throw new PoisonMessageException(
                 "TransferCompleted v1 is missing a required field or has an invalid amount.");
+        }
+
+        // ADR-0001: every wallet is IQD. The merchant summary has no currency in its key, so another
+        // currency would be added to an IQD total: refuse it instead of counting it wrong.
+        if (data.Currency != SupportedCurrency)
+        {
+            throw new PoisonMessageException($"Currency {data.Currency} is not supported; only {SupportedCurrency} (ADR-0001).");
         }
 
         return data;

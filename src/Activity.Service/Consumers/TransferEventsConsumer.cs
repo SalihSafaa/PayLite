@@ -130,7 +130,7 @@ public class TransferEventsConsumer : BackgroundService
         CancellationToken stoppingToken)
     {
         // The header is there even when the value can't be parsed, so poison messages are traceable too.
-        var correlationId = ReadHeader(result.Message.Headers, CorrelationHeaders.CorrelationId) ?? "-";
+        var correlationId = CorrelationIds.Sanitize(ReadHeader(result.Message.Headers, CorrelationHeaders.CorrelationId));
         using var logScope = _logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId });
 
         string? json;

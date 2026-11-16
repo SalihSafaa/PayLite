@@ -107,6 +107,22 @@ public class TransferEventProcessorTests : IClassFixture<ActivityServiceFactory>
     }
 
     [Fact]
+    public async Task CurrencyOtherThanIqd_IsPoison_AndNothingIsWritten()
+    {
+        var merchantUserId = NewUserId();
+        var json = Event(Guid.NewGuid(), merchantUserId, toIsMerchant: true, amount: 1000m)
+            .Replace("\"currency\":\"IQD\"", "\"currency\":\"USD\"");
+
+        var ex = await Assert.ThrowsAsync<PoisonMessageException>(() => ProcessAsync(json));
+
+        Assert.Contains("USD", ex.Message);
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<ActivityDbContext>();
+        Assert.False(await context.Notifications.AnyAsync(n => n.UserId == merchantUserId));
+        Assert.False(await context.MerchantHourlySummaries.AnyAsync(s => s.MerchantUserId == merchantUserId));
+    }
+
+    [Fact]
     public async Task UnknownEventType_IsIgnored()
     {
         var json = JsonSerializer.Serialize(
