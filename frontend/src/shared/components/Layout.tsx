@@ -1,7 +1,7 @@
 import { AppShell, Avatar, Burger, Drawer, Group, Menu, Stack, Text, UnstyledButton } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconChevronDown, IconLogout } from '@tabler/icons-react'
-import { NavLink, Outlet } from 'react-router'
+import { IconChevronDown, IconFileText, IconLogout } from '@tabler/icons-react'
+import { Link, NavLink, Outlet } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { NotificationBell } from '../../features/activity/NotificationBell'
 import { BrandLogo } from './BrandMark'
@@ -63,6 +63,9 @@ export function Layout() {
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>{isMerchant ? 'Merchant account' : 'Personal account'}</Menu.Label>
+                <Menu.Item leftSection={<IconFileText size={16} stroke={1.75} />} component={Link} to="/policy">
+                  Wallet policy
+                </Menu.Item>
                 <Menu.Item leftSection={<IconLogout size={16} stroke={1.75} />} onClick={signOut}>
                   Log out
                 </Menu.Item>

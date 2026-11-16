@@ -1,4 +1,4 @@
-import { Group, Table, Text, ThemeIcon } from '@mantine/core'
+import { Badge, Group, Table, Text, ThemeIcon } from '@mantine/core'
 import { IconArrowDownLeft, IconArrowUpRight } from '@tabler/icons-react'
 import { formatMoney } from '../../shared/lib/money'
 import type { TransferHistoryItem } from './useTransferHistory'
@@ -8,12 +8,13 @@ const dateFormat = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeS
 /** The full transfer history table (the dashboard uses the lighter ActivityList). */
 export function TransferTable({ items }: { items: TransferHistoryItem[] }) {
     return (
-        <Table.ScrollContainer minWidth={640}>
+        <Table.ScrollContainer minWidth={720}>
             <Table verticalSpacing="md" highlightOnHover className="data-table">
                 <Table.Thead>
                     <Table.Tr>
                         <Table.Th>Transaction</Table.Th>
                         <Table.Th>Date</Table.Th>
+                        <Table.Th>Status</Table.Th>
                         <Table.Th ta="right">Amount</Table.Th>
                         <Table.Th ta="right">Balance after</Table.Th>
                     </Table.Tr>
@@ -36,6 +37,11 @@ export function TransferTable({ items }: { items: TransferHistoryItem[] }) {
                                 </Table.Td>
                                 <Table.Td style={{ whiteSpace: 'nowrap' }}>
                                     <Text size="sm" c="dimmed">{dateFormat.format(new Date(item.createdAt))}</Text>
+                                </Table.Td>
+                                <Table.Td>
+                                    <Badge variant="light" color={item.status === 'Completed' ? 'teal' : 'gray'} radius="sm">
+                                        {item.status}
+                                    </Badge>
                                 </Table.Td>
                                 <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
                                     <Text span fw={600} className="money" c={sent ? undefined : 'teal.8'}>
