@@ -29,7 +29,7 @@ public class HealthAndAuthIntegrationTests : IClassFixture<WalletApiFactory>
     }
 
     [Fact]
-    public async Task RegisterThenLogin_ReturnsAccessAndRefreshTokens()
+    public async Task RegisterThenLogin_ReturnsAccessToken_AndRefreshTokenOnlyInTheCookie()
     {
         var username = $"user_{Guid.NewGuid():N}"[..30];
 
@@ -41,9 +41,11 @@ public class HealthAndAuthIntegrationTests : IClassFixture<WalletApiFactory>
             new { username, password = "TestPassword123!" });
         login.EnsureSuccessStatusCode();
 
-        var tokens = await login.Content.ReadFromJsonAsync<LoginResponseDto>();
-        Assert.False(string.IsNullOrWhiteSpace(tokens!.AccessToken));
-        Assert.False(string.IsNullOrWhiteSpace(tokens.RefreshToken));
+        using var body = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
+        Assert.False(string.IsNullOrWhiteSpace(body.RootElement.GetProperty("accessToken").GetString()));
+        // ADR-0003: the refresh token is never readable by JavaScript, so it is not in the body at all.
+        Assert.False(body.RootElement.TryGetProperty("refreshToken", out _));
+        Assert.Contains(login.Headers.GetValues("Set-Cookie"), c => c.StartsWith("paylite_refresh=", StringComparison.Ordinal));
     }
 
     [Fact]

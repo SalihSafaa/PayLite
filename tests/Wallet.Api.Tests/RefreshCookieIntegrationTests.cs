@@ -47,7 +47,9 @@ public class RefreshCookieIntegrationTests : IClassFixture<WalletApiFactory>
         var response = await RefreshWithCookieAsync(client, firstCookie);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("refreshToken", json, StringComparison.OrdinalIgnoreCase);
+        var body = await response.Content.ReadFromJsonAsync<AccessTokenResponseDto>();
         Assert.False(string.IsNullOrWhiteSpace(body!.AccessToken));
         var newCookie = CookieValue(response);
         Assert.NotNull(newCookie);
@@ -87,7 +89,7 @@ public class RefreshCookieIntegrationTests : IClassFixture<WalletApiFactory>
     {
         var client = CreateClient();
         var cookie = await LoginAndGetCookieAsync(client);
-        var accessToken = (await (await RefreshWithCookieAsync(client, cookie)).Content.ReadFromJsonAsync<LoginResponseDto>())!.AccessToken;
+        var accessToken = (await (await RefreshWithCookieAsync(client, cookie)).Content.ReadFromJsonAsync<AccessTokenResponseDto>())!.AccessToken;
         cookie = await LatestCookieAsync(client, cookie);
 
         var logout = new HttpRequestMessage(HttpMethod.Post, "/api/auth/logout");
