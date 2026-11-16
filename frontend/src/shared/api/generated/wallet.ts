@@ -495,7 +495,7 @@ export interface components {
             [key: string]: unknown;
         };
         RefreshRequestDto: {
-            refreshToken: string;
+            refreshToken?: string | null;
         };
         RegisterRequestDto: {
             username: string;

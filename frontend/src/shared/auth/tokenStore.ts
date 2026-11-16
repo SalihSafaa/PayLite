@@ -1,7 +1,7 @@
 // The access token lives ONLY in this module's memory: never localStorage/sessionStorage.
 // Any script injected through an XSS bug can read localStorage, but it cannot reach a
-// variable inside this module. Trade-off (accepted in the brief): a page refresh logs you out.
-// See docs/adr/0003-frontend-token-storage.md.
+// variable inside this module. A page refresh empties it; the session is then restored from the
+// httpOnly refresh cookie (see session.ts). See docs/adr/0003-frontend-token-storage.md.
 
 let accessToken: string | null = null
 const listeners = new Set<() => void>()

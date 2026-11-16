@@ -1,5 +1,7 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Options;
 
 namespace PayLite.WalletApi;
 
@@ -8,10 +10,12 @@ namespace PayLite.WalletApi;
 public class AuthController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly bool _secureCookie;
 
-    public AuthController(IUserService userService)
+    public AuthController(IUserService userService, IOptions<JwtOptions> jwtOptions)
     {
         _userService = userService;
+        _secureCookie = jwtOptions.Value.RefreshCookieSecure;
     }
 
     [HttpPost("register")]
@@ -31,24 +35,44 @@ public class AuthController : ControllerBase
         if (!result.IsSuccess)
             return this.ToActionResult(result);
 
+        RefreshTokenCookie.Write(Response, result.Value!.RefreshToken, _secureCookie);
         return Ok(result.Value);
     }
 
+    /// <summary>
+    /// New access token. The refresh token comes from the body or, for the browser, from the httpOnly cookie.
+    /// It is rotated on every use, and the new one is written back to the cookie.
+    /// </summary>
     [HttpPost("refresh")]
-    public async Task<ActionResult<LoginResponseDto>> Refresh(RefreshRequestDto request)
+    public async Task<ActionResult<LoginResponseDto>> Refresh(
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RefreshRequestDto? request)
     {
-        var result = await _userService.RefreshAsync(request.RefreshToken);
-        if (!result.IsSuccess)
-            return this.ToActionResult(result);
+        var refreshToken = request?.RefreshToken ?? RefreshTokenCookie.Read(Request);
+        if (refreshToken is null)
+            return this.ToActionResult(Result<LoginResponseDto>.Failure(ErrorType.UnAuthorized, "No refresh token."));
 
+        var result = await _userService.RefreshAsync(refreshToken);
+        if (!result.IsSuccess)
+        {
+            // Expired, revoked or reused: the cookie is useless now, so remove it.
+            RefreshTokenCookie.Delete(Response, _secureCookie);
+            return this.ToActionResult(result);
+        }
+
+        RefreshTokenCookie.Write(Response, result.Value!.RefreshToken, _secureCookie);
         return Ok(result.Value);
     }
 
     [HttpPost("logout")]
     [Authorize]
-    public async Task<IActionResult> Logout(RefreshRequestDto request)
+    public async Task<IActionResult> Logout(
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] RefreshRequestDto? request)
     {
-        await _userService.LogoutAsync(request.RefreshToken);
+        var refreshToken = request?.RefreshToken ?? RefreshTokenCookie.Read(Request);
+        if (refreshToken is not null)
+            await _userService.LogoutAsync(refreshToken);
+
+        RefreshTokenCookie.Delete(Response, _secureCookie);
         return NoContent();
     }
 
