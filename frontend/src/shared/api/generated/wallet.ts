@@ -838,6 +838,9 @@ export interface components {
             currency: string;
             /** Format: double */
             newBalance: number;
+            /** Format: date-time */
+            createdAt: string;
+            status: string;
         };
         UserResponseDto: {
             /** Format: int32 */

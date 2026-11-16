@@ -18,7 +18,7 @@ type PostResult = Awaited<ReturnType<typeof walletApi.POST>>
 function created(newBalance: number, replayed = false): PostResult {
     const headers = replayed ? { 'Idempotent-Replayed': 'true' } : undefined
     return {
-        data: { transferId: 1, toUsername: 'bob', amount: 1000, currency: 'IQD', newBalance },
+        data: { transferId: 1, toUsername: 'bob', amount: 1000, currency: 'IQD', newBalance, createdAt: '2026-11-16T09:15:00Z', status: 'Completed' },
         error: undefined,
         response: new Response(null, { status: 201, headers }),
     } as PostResult
@@ -26,6 +26,13 @@ function created(newBalance: number, replayed = false): PostResult {
 
 function failed(status: number, title: string): PostResult {
     return { data: undefined, error: { status, title }, response: new Response(null, { status }) } as PostResult
+}
+
+/** On the failure screen: "Try again" → the code → Confirm (the same transfer, the same key). */
+async function retryWithCode(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    await typeCode(user)
+    await user.click(screen.getByRole('button', { name: 'Confirm and send' }))
 }
 
 /** The options passed to the n-th POST (0-based). */
@@ -154,9 +161,9 @@ describe('SendMoneyPage', () => {
 
         await sendWithCode(user)
         expect((await screen.findByRole('alert')).textContent).toContain('Insufficient funds.')
-        await sendWithCode(user)
+        await retryWithCode(user)
         expect((await screen.findByRole('alert')).textContent).toContain('Failed to fetch')
-        await sendWithCode(user)
+        await retryWithCode(user)
         await screen.findByRole('status')
 
         expect(post).toHaveBeenCalledTimes(3)
@@ -172,6 +179,7 @@ describe('SendMoneyPage', () => {
         await sendWithCode(user)
         await screen.findByRole('alert')
 
+        await user.click(screen.getByRole('button', { name: 'Edit transfer' }))
         await fillForm(user, 'bob', '1000')
         await sendWithCode(user)
         await screen.findByRole('status')
@@ -179,24 +187,55 @@ describe('SendMoneyPage', () => {
         expect(keyOfCall(1)).not.toBe(keyOfCall(0))
     })
 
-    it('shows the new balance and uses a new key for the next transfer', async () => {
+    it('shows a receipt, and "Send another" starts a new transfer with a new key', async () => {
         post.mockResolvedValueOnce(created(9000))
         post.mockResolvedValueOnce(created(8000))
         const user = renderPage()
         await fillForm(user, 'bob', '1000')
         await sendWithCode(user)
 
-        const status = await screen.findByRole('status')
-        expect(status.textContent).toContain('New balance:')
-        expect(status.textContent).toContain('9,000')
-        expect(screen.getByLabelText<HTMLInputElement>('Amount (IQD)').value).toBe('')
+        const receipt = await screen.findByRole('status')
+        expect(receipt.textContent).toContain('Money sent')
+        expect(receipt.textContent).toContain('1,000')
+        expect(receipt.textContent).toContain('bob')
+        expect(receipt.textContent).toContain('#1')
+        expect(receipt.textContent).toContain('Completed')
+        expect(receipt.textContent).toContain('16 Nov 2026')
+        expect(receipt.textContent).toContain('New balance')
+        expect(receipt.textContent).toContain('9,000')
 
+        await user.click(screen.getByRole('button', { name: 'Send another' }))
+        expect(screen.getByLabelText<HTMLInputElement>('Amount (IQD)').value).toBe('')
         await fillForm(user, 'bob', '1000')
         await sendWithCode(user)
-        // 8,000 is now also the balance in the preview, so check the success message itself.
         await vi.waitFor(() => expect(screen.getByRole('status').textContent).toContain('8,000'))
 
         expect(keyOfCall(1)).not.toBe(keyOfCall(0))
+    })
+
+    it('shows a failure screen with the reason and what was attempted, and says no money moved', async () => {
+        post.mockResolvedValueOnce(failed(409, 'Insufficient funds.'))
+        const user = renderPage()
+        await fillForm(user, 'bob', '25000')
+        await sendWithCode(user)
+
+        const failure = await screen.findByRole('alert')
+        expect(failure.textContent).toContain('Transfer failed')
+        expect(failure.textContent).toContain('Insufficient funds.')
+        expect(failure.textContent).toContain('bob')
+        expect(failure.textContent).toContain('25,000')
+        expect(failure.textContent).toContain('No money left your wallet.')
+    })
+
+    it("says it can't confirm (not failed) when the server can't be reached", async () => {
+        post.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+        const user = renderPage()
+        await fillForm(user, 'bob', '1000')
+        await sendWithCode(user)
+
+        const failure = await screen.findByRole('alert')
+        expect(failure.textContent).toContain("We couldn't confirm the transfer")
+        expect(failure.textContent).toContain('never sent twice')
     })
 
     it('says so when the server replays an earlier transfer', async () => {

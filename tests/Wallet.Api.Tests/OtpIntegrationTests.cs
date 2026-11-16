@@ -49,6 +49,15 @@ public class OtpIntegrationTests : IClassFixture<WalletApiFactory>
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal(9_000m, await GetBalanceAsync(alice.Client));
+
+        // Everything the receipt screen shows.
+        var receipt = (await response.Content.ReadFromJsonAsync<TransferResultDto>())!;
+        Assert.True(receipt.TransferId > 0);
+        Assert.Equal(bob.Username, receipt.ToUsername);
+        Assert.Equal(1_000m, receipt.Amount);
+        Assert.Equal(9_000m, receipt.NewBalance);
+        Assert.Equal(TransferStatus.Completed, receipt.Status);
+        Assert.InRange(receipt.CreatedAt, DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow.AddMinutes(1));
     }
 
     [Fact]
@@ -68,6 +77,11 @@ public class OtpIntegrationTests : IClassFixture<WalletApiFactory>
         Assert.False(right.Headers.Contains("Idempotent-Replayed"));
         Assert.Equal(HttpStatusCode.Created, again.StatusCode);
         Assert.Equal("true", again.Headers.GetValues("Idempotent-Replayed").Single());
+        // The replay shows the same transfer, with its original time.
+        var first = (await right.Content.ReadFromJsonAsync<TransferResultDto>())!;
+        var replay = (await again.Content.ReadFromJsonAsync<TransferResultDto>())!;
+        Assert.Equal(first.TransferId, replay.TransferId);
+        Assert.Equal(first.CreatedAt, replay.CreatedAt);
         Assert.Equal(9_000m, await GetBalanceAsync(alice.Client)); // moved once
     }
 
