@@ -3,10 +3,167 @@
  * Do not make direct changes to the file.
  */
 
-export type paths = Record<string, never>;
+export interface paths {
+    "/api/merchants/me/daily-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    date?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["DailySummaryDto"];
+                        "application/json": components["schemas"]["DailySummaryDto"];
+                        "text/json": components["schemas"]["DailySummaryDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    unreadOnly?: boolean;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["NotificationListDto"];
+                        "application/json": components["schemas"]["NotificationListDto"];
+                        "text/json": components["schemas"]["NotificationListDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["NotificationDto"];
+                        "application/json": components["schemas"]["NotificationDto"];
+                        "text/json": components["schemas"]["NotificationDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+}
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
+    schemas: {
+        DailySummaryDto: {
+            /** Format: date */
+            date: string;
+            currency: string;
+            /** Format: int32 */
+            paymentCount: number;
+            /** Format: double */
+            totalAmount: number;
+            byHour: components["schemas"]["HourlyTotalDto"][];
+        };
+        HourlyTotalDto: {
+            /** Format: int32 */
+            hour: number;
+            /** Format: int32 */
+            paymentCount: number;
+            /** Format: double */
+            totalAmount: number;
+        };
+        NotificationDto: {
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            transferId: number;
+            fromUsername: string;
+            /** Format: double */
+            amount: number;
+            currency: string;
+            /** Format: date-time */
+            occurredAt: string;
+            /** Format: date-time */
+            readAt?: string | null;
+        };
+        NotificationListDto: {
+            items: components["schemas"]["NotificationDto"][];
+            /** Format: int32 */
+            unreadCount: number;
+        };
+    };
     responses: never;
     parameters: never;
     requestBodies: never;

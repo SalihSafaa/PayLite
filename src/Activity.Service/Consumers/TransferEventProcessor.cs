@@ -16,11 +16,13 @@ public class TransferEventProcessor : ITransferEventProcessor
     private static readonly TimeZoneInfo Baghdad = FindBaghdad();
 
     private readonly ActivityDbContext _context;
+    private readonly INotificationPusher _pusher;
     private readonly ILogger<TransferEventProcessor> _logger;
 
-    public TransferEventProcessor(ActivityDbContext context, ILogger<TransferEventProcessor> logger)
+    public TransferEventProcessor(ActivityDbContext context, INotificationPusher pusher, ILogger<TransferEventProcessor> logger)
     {
         _context = context;
+        _pusher = pusher;
         _logger = logger;
     }
 
@@ -46,6 +48,7 @@ public class TransferEventProcessor : ITransferEventProcessor
 
         var data = ReadTransferCompleted(envelope);
         await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        Notification notification;
 
         try
         {
@@ -56,7 +59,7 @@ public class TransferEventProcessor : ITransferEventProcessor
                 ProcessedAt = DateTime.UtcNow
             });
 
-            _context.Notifications.Add(new Notification
+            notification = new Notification
             {
                 UserId = data.ToUserId,
                 EventId = envelope.EventId,
@@ -66,7 +69,8 @@ public class TransferEventProcessor : ITransferEventProcessor
                 Currency = data.Currency,
                 OccurredAt = envelope.OccurredAt,
                 CreatedAt = DateTime.UtcNow
-            });
+            };
+            _context.Notifications.Add(notification);
 
             await _context.SaveChangesAsync(cancellationToken);
         }
@@ -86,6 +90,9 @@ public class TransferEventProcessor : ITransferEventProcessor
         }
 
         await transaction.CommitAsync(cancellationToken);
+
+        // Only after the commit: the browser must never see a notification that could still roll back.
+        await _pusher.PushAsync(data.ToUserId, NotificationService.ToDto(notification), cancellationToken);
 
         _logger.LogInformation(
             "Processed event {EventId}: transfer {TransferId}, {Amount} {Currency} to user {ToUserId} (correlation {CorrelationId})",
