@@ -1,3 +1,4 @@
+import { IconBell } from '@tabler/icons-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { activityApi } from '../../shared/api/clients'
@@ -43,8 +44,8 @@ export function NotificationBell() {
 
   return (
     <Link to="/notifications" className="bell" aria-label={label} title={label}>
-      <span aria-hidden="true">🔔</span>
-      {unread ? <span className="bell-count">{unread > 99 ? '99+' : unread}</span> : null}
+      <IconBell size={22} stroke={1.75} aria-hidden="true" />
+      {unread ? <span className="bell-count" aria-hidden="true">{unread > 99 ? '99+' : unread}</span> : null}
     </Link>
   )
 }

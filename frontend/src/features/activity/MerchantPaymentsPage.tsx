@@ -1,5 +1,9 @@
+import { Card, Group, Table, Text, ThemeIcon } from '@mantine/core'
+import { IconArrowDownLeft, IconReceipt } from '@tabler/icons-react'
 import { useState } from 'react'
-import { ProblemDetailsAlert } from '../../shared/components/ProblemDetailsAlert'
+import { PageHeader } from '../../shared/components/PageHeader'
+import { Pager } from '../../shared/components/Pager'
+import { EmptyState, ErrorState, LoadingState } from '../../shared/components/States'
 import { formatMoney } from '../../shared/lib/money'
 import { useMerchantPayments } from './useMerchantPayments'
 
@@ -18,56 +22,56 @@ export function MerchantPaymentsPage() {
   }
 
   return (
-    <section>
-      <h1>Incoming payments</h1>
-      <div className="card">
-        {loading && <p className="muted">Loading payments…</p>}
+    <>
+      <PageHeader title="Incoming payments" description="Payments from your customers, newest first." />
+      <Card>
+        {loading && <LoadingState label="Loading payments…" />}
 
-        {!loading && problem && (
-          <>
-            <ProblemDetailsAlert problem={problem} />
-            <button type="button" onClick={reload}>Try again</button>
-          </>
-        )}
+        {!loading && problem && <ErrorState problem={problem} onRetry={reload} />}
 
         {!loading && !problem && data && data.totalCount === 0 && (
-          <p className="muted">No payments yet. Payments from customers show up here.</p>
+          <EmptyState icon={<IconReceipt size={24} stroke={1.75} />} title="Waiting for your first customer">
+            No payments yet. Payments from customers show up here.
+          </EmptyState>
         )}
 
         {!loading && !problem && data && data.totalCount > 0 && (
           <>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>From</th>
-                  <th className="num">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((p) => (
-                  <tr key={p.transferId}>
-                    <td>{dateFormat.format(new Date(p.createdAt))}</td>
-                    <td>{p.fromUsername}</td>
-                    <td className="num in">+{formatMoney(p.amount, p.currency)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="pager">
-              <button type="button" onClick={() => goTo(page - 1)} disabled={page <= 1}>
-                Previous
-              </button>
-              <span className="muted">
-                Page {page} of {totalPages} · {data.totalCount} {data.totalCount === 1 ? 'payment' : 'payments'}
-              </span>
-              <button type="button" onClick={() => goTo(page + 1)} disabled={page >= totalPages}>
-                Next
-              </button>
-            </div>
+            <Table.ScrollContainer minWidth={480}>
+              <Table verticalSpacing="md" highlightOnHover className="data-table">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>From</Table.Th>
+                    <Table.Th>Date</Table.Th>
+                    <Table.Th ta="right">Amount</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {data.items.map((p) => (
+                    <Table.Tr key={p.transferId}>
+                      <Table.Td>
+                        <Group gap="sm" wrap="nowrap">
+                          <ThemeIcon size={36} radius="xl" variant="light" color="teal" aria-hidden="true">
+                            <IconArrowDownLeft size={18} stroke={1.75} />
+                          </ThemeIcon>
+                          <Text fw={600} size="sm">{p.fromUsername}</Text>
+                        </Group>
+                      </Table.Td>
+                      <Table.Td style={{ whiteSpace: 'nowrap' }}>
+                        <Text size="sm" c="dimmed">{dateFormat.format(new Date(p.createdAt))}</Text>
+                      </Table.Td>
+                      <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
+                        <Text span fw={600} c="teal.8" className="money">+{formatMoney(p.amount, p.currency)}</Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Table.ScrollContainer>
+            <Pager page={page} totalPages={totalPages} total={data.totalCount} noun={['payment', 'payments']} onPage={goTo} />
           </>
         )}
-      </div>
-    </section>
+      </Card>
+    </>
   )
 }

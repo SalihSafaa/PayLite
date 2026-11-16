@@ -1,18 +1,23 @@
-import { Alert, Anchor, Button, Card, Stack, Text, TextInput, Title } from '@mantine/core'
+import { Alert, Anchor, Button, Card, Chip, Divider, Grid, Group, Stack, Text, TextInput } from '@mantine/core'
+import { IconCircleCheck } from '@tabler/icons-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { walletApi } from '../../shared/api/clients'
 import type { components } from '../../shared/api/generated/wallet'
 import { toProblemDetails, type ProblemDetails } from '../../shared/api/problemDetails'
 import { ProblemDetailsAlert } from '../../shared/components/ProblemDetailsAlert'
+import { PageHeader } from '../../shared/components/PageHeader'
 import { formatMoney } from '../../shared/lib/money'
+import { useMyWallet } from './useMyWallet'
 
 type TransferResultDto = components['schemas']['TransferResultDto']
 
 const MAX_TRANSFER = 10_000_000 // same as Wallet:MaxTransferAmount on the server, which has the final say
 const IDEMPOTENCY_HEADER = 'Idempotency-Key' // keep in sync with Shared.Contracts/Http/CorrelationHeaders.cs
+const QUICK_AMOUNTS = [5_000, 10_000, 25_000, 50_000]
 
 export function SendMoneyPage() {
+    const { wallet, setWallet } = useMyWallet()
     const [toUsername, setToUsername] = useState('')
     const [amount, setAmount] = useState('')
     const [submitting, setSubmitting] = useState(false)
@@ -68,6 +73,7 @@ export function SendMoneyPage() {
                 return
             }
             setSent({ transfer: data, replayed: response.headers.get('Idempotent-Replayed') === 'true' })
+            if (wallet) setWallet({ ...wallet, balance: data.newBalance })
             setToUsername('')
             setAmount('')
             setIdempotencyKey(crypto.randomUUID())
@@ -80,26 +86,85 @@ export function SendMoneyPage() {
         }
     }
 
+    // Live preview, only a hint: the server checks the balance and has the final say.
+    const previewAmount = /^\d+$/.test(amount.trim()) ? Number(amount) : null
+    const balanceAfter = wallet && previewAmount !== null ? wallet.balance - previewAmount : null
+
     return (
-        <Stack maw={480}>
-            <Title order={2}>Send money</Title>
-            <Card withBorder radius="md" p="lg">
-                <form onSubmit={handleSubmit} noValidate>
-                    <Stack>
-                        <TextInput label="Recipient username" value={toUsername} onChange={(e) => handleChange(setToUsername, e.currentTarget.value)} autoComplete="off" placeholder="bob" />
-                        <TextInput label="Amount (IQD)" description="Whole dinars, up to 10,000,000" inputMode="numeric" value={amount} onChange={(e) => handleChange(setAmount, e.currentTarget.value)} placeholder="25000" />
-                        <ProblemDetailsAlert problem={problem} />
-                        <Button type="submit" disabled={submitting} loading={submitting}>{submitting ? 'Sending…' : 'Send'}</Button>
-                    </Stack>
-                </form>
-            </Card>
-            {sent && (
-                <Alert role="status" color="teal" variant="light" title={`Sent ${formatMoney(sent.transfer.amount, sent.transfer.currency)} to ${sent.transfer.toUsername}.`}>
-                    <Text size="sm">New balance: {formatMoney(sent.transfer.newBalance, sent.transfer.currency)}</Text>
-                    {sent.replayed && <Text size="sm" c="dimmed">This transfer was already done, so nothing was sent twice.</Text>}
-                    <Anchor component={Link} to="/history" size="sm">View history</Anchor>
-                </Alert>
-            )}
-        </Stack>
+        <>
+            <PageHeader title="Send money" description="Send IQD to anyone with a PayLite username. It arrives straight away." />
+            <Grid gap="lg">
+                <Grid.Col span={{ base: 12, md: 7 }}>
+                <Card>
+                    <form onSubmit={handleSubmit} noValidate>
+                        <Stack gap="lg">
+                            <TextInput label="Recipient username" value={toUsername} onChange={(e) => handleChange(setToUsername, e.currentTarget.value)} autoComplete="off" placeholder="e.g. coffeeshop" />
+                            <div>
+                                <TextInput
+                                    label="Amount (IQD)"
+                                    description="Whole dinars, up to 10,000,000"
+                                    inputMode="numeric"
+                                    value={amount}
+                                    onChange={(e) => handleChange(setAmount, e.currentTarget.value)}
+                                    placeholder="25000"
+                                    size="lg"
+                                    classNames={{ input: 'amount-input' }}
+                                    rightSection={<Text c="dimmed" fw={500} size="sm">IQD</Text>}
+                                    rightSectionWidth={56}
+                                />
+                                <Group gap="xs" mt="sm">
+                                    {QUICK_AMOUNTS.map((q) => (
+                                        <Chip key={q} checked={amount === String(q)} onChange={() => handleChange(setAmount, String(q))} variant="outline" color="plum" size="sm">
+                                            {formatMoney(q)}
+                                        </Chip>
+                                    ))}
+                                </Group>
+                            </div>
+                            <ProblemDetailsAlert problem={problem} />
+                            <Button type="submit" size="md" disabled={submitting} loading={submitting}>{submitting ? 'Sending…' : 'Send'}</Button>
+                        </Stack>
+                    </form>
+                </Card>
+                </Grid.Col>
+
+                <Grid.Col span={{ base: 12, md: 5 }}>
+                <Stack gap="lg">
+                    {sent && (
+                        <Alert role="status" color="teal" variant="light" radius="lg" icon={<IconCircleCheck size={22} stroke={1.75} />}
+                            title={`Sent ${formatMoney(sent.transfer.amount, sent.transfer.currency)} to ${sent.transfer.toUsername}.`}>
+                            <Text size="sm">New balance: {formatMoney(sent.transfer.newBalance, sent.transfer.currency)}</Text>
+                            {sent.replayed && <Text size="sm" c="dimmed">This transfer was already done, so nothing was sent twice.</Text>}
+                            <Anchor component={Link} to="/history" size="sm" fw={500}>View history</Anchor>
+                        </Alert>
+                    )}
+                    <Card className="preview-card">
+                        <Text fw={600} mb="sm">Summary</Text>
+                        <Group justify="space-between">
+                            <Text c="dimmed" size="sm">To</Text>
+                            <Text fw={500} size="sm">{toUsername.trim() || '—'}</Text>
+                        </Group>
+                        <Group justify="space-between" mt={6}>
+                            <Text c="dimmed" size="sm">You send</Text>
+                            <Text fw={600} className="money">{previewAmount !== null ? formatMoney(previewAmount) : '—'}</Text>
+                        </Group>
+                        <Divider my="sm" />
+                        <Group justify="space-between">
+                            <Text c="dimmed" size="sm">Your balance</Text>
+                            <Text size="sm" className="money">{wallet ? formatMoney(wallet.balance, wallet.currency) : '—'}</Text>
+                        </Group>
+                        <Group justify="space-between" mt={6}>
+                            <Text c="dimmed" size="sm">Balance after</Text>
+                            <Text size="sm" fw={600} className="money" c={balanceAfter !== null && balanceAfter < 0 ? 'red.8' : undefined}>
+                                {balanceAfter !== null ? formatMoney(balanceAfter) : '—'}
+                            </Text>
+                        </Group>
+                        {balanceAfter !== null && balanceAfter < 0 && (
+                            <Text size="xs" c="red.8" mt="xs">That is more than your balance.</Text>
+                        )}
+                    </Card>
+                </Stack>
+                </Grid.Col>
+            </Grid>
+        </>
     )
 }

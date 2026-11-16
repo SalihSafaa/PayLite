@@ -1,5 +1,9 @@
+import { Button, Card, Checkbox, Group, Text, ThemeIcon } from '@mantine/core'
+import { IconArrowDownLeft, IconBellOff } from '@tabler/icons-react'
 import { useState } from 'react'
+import { PageHeader } from '../../shared/components/PageHeader'
 import { ProblemDetailsAlert } from '../../shared/components/ProblemDetailsAlert'
+import { EmptyState, ErrorState, LoadingState } from '../../shared/components/States'
 import { formatMoney } from '../../shared/lib/money'
 import { useNotifications } from './useNotifications'
 
@@ -16,27 +20,21 @@ export function NotificationsPage() {
   }
 
   return (
-    <section>
-      <h1>Notifications</h1>
-      <div className="card">
-        <label className="checkbox">
-          <input type="checkbox" checked={unreadOnly} onChange={(e) => changeFilter(e.target.checked)} />
-          Unread only
-        </label>
+    <>
+      <PageHeader
+        title="Notifications"
+        description="Money you receive, live."
+        action={<Checkbox label="Unread only" checked={unreadOnly} onChange={(e) => changeFilter(e.currentTarget.checked)} color="plum" />}
+      />
+      <Card>
+        {loading && <LoadingState label="Loading notifications…" />}
 
-        {loading && <p className="muted">Loading notifications…</p>}
-
-        {!loading && problem && (
-          <>
-            <ProblemDetailsAlert problem={problem} />
-            <button type="button" onClick={reload}>Try again</button>
-          </>
-        )}
+        {!loading && problem && <ErrorState problem={problem} onRetry={reload} />}
 
         {!loading && !problem && items.length === 0 && (
-          <p className="muted">
+          <EmptyState icon={<IconBellOff size={24} stroke={1.75} />} title={unreadOnly ? 'All caught up' : 'Nothing here yet'}>
             {unreadOnly ? 'No unread notifications.' : 'No notifications yet. You will see money you receive here, live.'}
-          </p>
+          </EmptyState>
         )}
 
         {!loading && !problem && items.length > 0 && (
@@ -45,23 +43,30 @@ export function NotificationsPage() {
             <ul className="notification-list">
               {items.map((n) => (
                 <li key={n.id} className={n.readAt ? 'read' : 'unread'}>
-                  <div>
-                    <strong>{formatMoney(n.amount, n.currency)}</strong> received from <strong>{n.fromUsername}</strong>
-                    <div className="muted">{dateFormat.format(new Date(n.occurredAt))}</div>
-                  </div>
+                  <Group gap="sm" wrap="nowrap" miw={0}>
+                    <ThemeIcon size={40} radius="xl" variant="light" color="teal" aria-hidden="true">
+                      <IconArrowDownLeft size={20} stroke={1.75} />
+                    </ThemeIcon>
+                    <div style={{ minWidth: 0 }}>
+                      <Text size="sm">
+                        <strong className="money">{formatMoney(n.amount, n.currency)}</strong> received from <strong>{n.fromUsername}</strong>
+                      </Text>
+                      <Text size="xs" c="dimmed">{dateFormat.format(new Date(n.occurredAt))}</Text>
+                    </div>
+                  </Group>
                   {n.readAt ? (
-                    <span className="muted">Read</span>
+                    <Text size="sm" c="dimmed">Read</Text>
                   ) : (
-                    <button type="button" onClick={() => void markAsRead(n.id)} disabled={markingId === n.id}>
+                    <Button size="xs" variant="light" color="plum" onClick={() => void markAsRead(n.id)} disabled={markingId === n.id}>
                       {markingId === n.id ? 'Marking…' : 'Mark as read'}
-                    </button>
+                    </Button>
                   )}
                 </li>
               ))}
             </ul>
           </>
         )}
-      </div>
-    </section>
+      </Card>
+    </>
   )
 }

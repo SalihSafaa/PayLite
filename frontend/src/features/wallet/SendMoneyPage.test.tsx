@@ -8,8 +8,10 @@ import { theme } from '../../shared/theme'
 import { SendMoneyPage } from './SendMoneyPage'
 
 // Replace the real API client: these tests check what the page sends, not the server.
-vi.mock('../../shared/api/clients', () => ({ walletApi: { POST: vi.fn() } }))
+// GET is the wallet (for the balance preview), POST is the transfer under test.
+vi.mock('../../shared/api/clients', () => ({ walletApi: { GET: vi.fn(), POST: vi.fn() } }))
 const post = vi.mocked(walletApi.POST)
+const get = vi.mocked(walletApi.GET)
 
 type PostResult = Awaited<ReturnType<typeof walletApi.POST>>
 
@@ -59,6 +61,11 @@ async function fillForm(user: ReturnType<typeof userEvent.setup>, toUsername: st
 describe('SendMoneyPage', () => {
     beforeEach(() => {
         post.mockReset()
+        get.mockReset()
+        get.mockResolvedValue({
+            data: { id: 1, balance: 100_000, currency: 'IQD', isMerchant: false },
+            response: new Response(),
+        } as Awaited<ReturnType<typeof walletApi.GET>>)
     })
 
     afterEach(() => {
@@ -169,7 +176,8 @@ describe('SendMoneyPage', () => {
 
         await fillForm(user, 'bob', '1000')
         await user.click(screen.getByRole('button', { name: 'Send' }))
-        await screen.findByText(/8,000/)
+        // 8,000 is now also the balance in the preview, so check the success message itself.
+        await vi.waitFor(() => expect(screen.getByRole('status').textContent).toContain('8,000'))
 
         expect(keyOfCall(1)).not.toBe(keyOfCall(0))
     })
