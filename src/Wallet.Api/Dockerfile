@@ -15,8 +15,11 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
 
 COPY src/Shared.Contracts/ src/Shared.Contracts/
 COPY src/Wallet.Api/ src/Wallet.Api/
+# No --no-restore: the restore layer above can come from Docker's layer cache while the NuGet cache
+# mount has been emptied (Docker Desktop prunes it), and then publish fails with NETSDK1064.
+# Restoring again here is fast when the packages are still in the cache mount.
 RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish src/Wallet.Api/Wallet.Api.csproj -c Release -o /app/publish --no-restore
+    dotnet publish src/Wallet.Api/Wallet.Api.csproj -c Release -o /app/publish
 
 # Stage 2: run on the small ASP.NET runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
