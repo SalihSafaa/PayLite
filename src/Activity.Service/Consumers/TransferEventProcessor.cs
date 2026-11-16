@@ -8,7 +8,7 @@ namespace PayLite.ActivityService;
 /// <summary>
 /// Applies a transfer event and all its ActivityDb effects in one transaction.
 /// </summary>
-public class TransferEventProcessor
+public class TransferEventProcessor : ITransferEventProcessor
 {
     private const int PrimaryKeyViolation = 2627;
     private const int UniqueIndexViolation = 2601;

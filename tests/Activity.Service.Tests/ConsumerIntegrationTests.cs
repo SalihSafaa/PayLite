@@ -25,27 +25,7 @@ public class ConsumerIntegrationTests : IClassFixture<ActivityServiceFactory>, I
 
     public async Task InitializeAsync()
     {
-        using (var admin = new AdminClientBuilder(new AdminClientConfig
-        {
-            BootstrapServers = _factory.KafkaBootstrapServers
-        }).Build())
-        {
-            try
-            {
-                await admin.CreateTopicsAsync(
-                [
-                    new TopicSpecification
-                    {
-                        Name = Topics.Transfers,
-                        NumPartitions = 3,
-                        ReplicationFactor = 1
-                    }
-                ]);
-            }
-            catch (CreateTopicsException ex) when (ex.Results.All(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
-            {
-            }
-        }
+        await KafkaTestHelper.EnsureTopicsAsync(_factory.KafkaBootstrapServers);
 
         _producer = new ProducerBuilder<string, string>(new ProducerConfig
         {

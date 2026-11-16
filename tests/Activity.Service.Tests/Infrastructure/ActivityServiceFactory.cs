@@ -61,5 +61,7 @@ public class ActivityServiceFactory : WebApplicationFactory<Program>, IAsyncLife
 
         builder.UseSetting("Jwt:Key", "test-only-signing-key-0000000000000000");
         builder.UseSetting("Kafka:BootstrapServers", KafkaBootstrapServers);
+        // Retries 100 ms, 200 ms, 400 ms instead of 1 s, 2 s, 4 s, so the retry tests stay fast.
+        builder.UseSetting("Kafka:RetryBaseDelayMs", "100");
     }
 }

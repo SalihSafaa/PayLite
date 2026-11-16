@@ -6,13 +6,21 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using PayLite.ActivityService;
 using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Same setup as the Wallet API, so both services' logs look alike on Demo Day:
+// every line starts with the transfer's correlation id, and framework noise is turned down
+// (Serilog doesn't read the "Logging" section of appsettings). Failed SQL commands are still errors.
+const string LogTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] [{CorrelationId}] {Message:lj}{NewLine}{Exception}";
 Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File("logs/activity-log.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.Console(outputTemplate: LogTemplate)
+    .WriteTo.File("logs/activity-log.txt", outputTemplate: LogTemplate, rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -51,7 +59,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // Accept it in options.Events.OnMessageReceived ONLY when the path starts with /hubs/notifications.
     });
 
+// Applies one Kafka event to ActivityDb (ADR-0004). A new scope (and DbContext) per message.
 builder.Services.AddScoped<TransferEventProcessor>();
+builder.Services.AddScoped<ITransferEventProcessor>(sp => sp.GetRequiredService<TransferEventProcessor>());
 if (builder.Configuration.GetValue($"{KafkaOptions.SectionName}:ConsumerEnabled", true))
 {
     builder.Services.AddHostedService<TransferEventsConsumer>();
