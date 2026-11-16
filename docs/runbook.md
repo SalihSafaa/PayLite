@@ -108,20 +108,17 @@ window within a second of that.
 ### Drill 5: the same event twice
 
 Covered by the tests (`ConsumerIntegrationTests.SameEventTwice_OneNotificationAndNoDoubleCount`). In compose,
-re-publish an event that was already processed:
+make the Wallet API's outbox publish the last event **again**, exactly like a publisher crash between
+Kafka's acknowledgement and setting `SentAt` (ADR-0004). Same `eventId`, key and headers:
 
 ```bash
-# copy one TransferCompleted envelope from the Wallet outbox...
-docker compose exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -h -1 -y 0 \
-  -Q "SET NOCOUNT ON; SELECT TOP 1 Payload FROM WalletDb.wallet.OutboxMessages ORDER BY Id DESC"' > /tmp/event.json
-# ...and put it on the topic again
-docker compose exec -T kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 \
-  --topic paylite.transfers < /tmp/event.json
-docker compose logs activity-service | grep "already processed"
+docker compose exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C \
+  -Q "UPDATE WalletDb.wallet.OutboxMessages SET SentAt = NULL WHERE Id = (SELECT MAX(Id) FROM WalletDb.wallet.OutboxMessages)"'
+docker compose logs -f wallet-api activity-service   # "Published event <id>" again, then "already processed, skipping"
 ```
 
-The Activity Service logs `Event ... was already processed, skipping`. The notification count and the
-merchant summary don't change.
+The Activity Service logs `Event <id> was already processed, skipping`. The notification count, the bell
+and the merchant summary don't change.
 
 ### Drill 6: Activity Service down during transfers
 

@@ -39,7 +39,7 @@ in [`runbook.md`](runbook.md).
 | 1 | Salih | Double-click **Send** | One transfer; the button is disabled while in flight; one notification on the right. |
 | 4 | Salih + Aboalhassan | `docker compose stop kafka`, send 700, `docker compose start kafka` | `201` immediately and the balance moves; `/health` says Degraded; the outbox row has `SentAt = NULL`; ~10 s after Kafka is back: "Published event", then the **notification appears live**. |
 | 6 | Aboalhassan | `docker compose stop activity-service`, send 3 transfers, show the lag, `docker compose start activity-service` | Lag 3 → 0; three "Processed event" lines within a second; 3 notifications, summary total = sum of the 3. |
-| 5 | Aboalhassan | Re-publish an already-processed event (runbook drill 5) | `already processed, skipping`; the notification count and the summary don't change. Explain: the `ProcessedEvents` primary key + one transaction. |
+| 5 | Aboalhassan | Make the outbox re-send the last event: `UPDATE ... SET SentAt = NULL` (runbook drill 5) | Wallet: `Published event <id>` a second time, with the same id. Activity: `already processed, skipping`; the bell, the list and the summary don't change. Explain: the `ProcessedEvents` primary key + one transaction. |
 | 7 | Aboalhassan | `echo 'this is not json' \| ... kafka-console-producer ...` | Log: `Sent ... to paylite.transfers.dlt (poison)`; read the DLT with headers; **send one more transfer: it still arrives**, so the consumer kept going. |
 
 If something goes wrong live: say what you expected, show `/health` and the logs for the correlation id. That
