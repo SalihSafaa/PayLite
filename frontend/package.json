@@ -12,7 +12,8 @@
     "gen:api": "npm run gen:api:wallet && npm run gen:api:activity",
     "gen:api:wallet": "openapi-typescript http://localhost:8081/swagger/v1/swagger.json -o src/shared/api/generated/wallet.ts",
     "gen:api:activity": "openapi-typescript http://localhost:8082/swagger/v1/swagger.json -o src/shared/api/generated/activity.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@mantine/core": "9.7.5",
@@ -24,6 +25,7 @@
     "react-router": "^8.5.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.10",
