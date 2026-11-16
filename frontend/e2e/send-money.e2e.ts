@@ -25,8 +25,8 @@ async function topUp(request: APIRequestContext, username: string, amount: numbe
 // (a full page load would log it out, exactly like a real user pressing F5).
 async function logIn(page: Page, username: string) {
   await page.goto('/login')
-  await page.getByLabel(/username/i).fill(username)
-  await page.getByLabel(/password/i).fill(PASSWORD)
+  await page.getByLabel('Username', { exact: true }).fill(username)
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: /log in|sign in/i }).click()
   await expect(page.getByText('Balance')).toBeVisible()
 }

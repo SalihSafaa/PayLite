@@ -4,6 +4,8 @@ import { defineConfig } from '@playwright/test'
 // then `npm run e2e`. Not part of CI (they need every container running).
 export default defineConfig({
   testDir: './e2e',
+  // *.e2e.ts, not *.spec.ts, so Vitest (`npm test`) never picks these up.
+  testMatch: '**/*.e2e.ts',
   timeout: 60_000,
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
