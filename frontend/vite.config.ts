@@ -14,6 +14,8 @@ export default defineConfig({
   // `npm test`: component tests run in a fake browser (jsdom), with no backend.
   test: {
     environment: 'jsdom',
+    // e2e/ is Playwright (`npm run e2e`), against the running compose stack, not Vitest.
+    exclude: ['**/node_modules/**', 'e2e/**'],
   },
   server: {
     port: 5173,
