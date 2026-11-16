@@ -71,5 +71,7 @@ Expect questions about **each other's** half. Short answers:
 | Why `toWalletId` as the Kafka key? | Everything the Activity Service builds is per recipient, so one recipient's events stay in order on one partition. |
 | Why `Clients.User` and not a group? | The JWT's user id is the SignalR user id, so a push goes to that user's connections only. |
 | Why is the token in the URL for SignalR? | Browsers can't set headers on a WebSocket. We accept `?access_token=` only on `/hubs/notifications`, and nginx doesn't log that path. |
-| Why keep the token in memory, not `localStorage`? | An XSS script can read `localStorage`. The trade-off: a refresh logs you out. |
+| Why keep the token in memory, not `localStorage`? | An XSS script can read `localStorage`. The access token lives in memory only; the refresh token is in an `HttpOnly; SameSite=Strict; Path=/api/auth` cookie that JavaScript can't read. So F5 still keeps you logged in: on start-up the app trades the cookie for a new access token. |
+| Isn't a cookie open to CSRF? | `SameSite=Strict` means the browser never sends it on a request started by another site, and `Path=/api/auth` means it only goes to login, refresh and logout. |
+| Why only one refresh at a time? | Every refresh rotates the token. A second request with the old one looks like a stolen token, and reuse detection would log the user out everywhere. |
 | What if `ActivityDb` is wiped? | Reset the consumer group to the earliest offset and replay: the topic keeps events forever, and processing is idempotent and order-independent. |
